@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableau de bord — Moulin des Moines</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Outfit",sans-serif;background:var(--cream);color:var(--brown);min-height:100vh}
+
+:root{
+  --brown: #78503C; --terra: #C87864; --cream: #FDF5EE;
+  --gold: #D2B469;  --green: #1A5C2E; --white: #fff;
+  --shadow: rgba(120,80,60,0.10);
+}
+
+/* Header */
+.dash-header{background:var(--brown);color:#fff;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px var(--shadow)}
+.dash-logo{font-size:18px;font-weight:700;letter-spacing:.5px}
+.dash-logo span{color:var(--gold)}
+.dash-user{font-size:12px;opacity:.8;text-align:right;line-height:1.6}
+.dash-header-actions{display:flex;align-items:center;gap:10px}
+.btn-header{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid rgba(255,255,255,.35);border-radius:6px;background:transparent;color:#fff;font-family:"Outfit",sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s}
+.btn-header:hover{background:rgba(255,255,255,.12)}
+.btn-header.primary{background:var(--gold);color:var(--brown);border-color:var(--gold)}
+.btn-header.primary:hover{opacity:.9}
+.btn-header.danger{border-color:rgba(255,100,80,.5);color:#ffb0a0}
+
+/* Layout */
+.dash-body{max-width:1100px;margin:0 auto;padding:28px 20px}
+.dash-title{font-size:22px;font-weight:700;color:var(--brown);margin-bottom:4px}
+.dash-sub{font-size:13px;color:#b09080;margin-bottom:24px}
+
+/* KPI grid */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.kpi-card{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 10px var(--shadow);border:1px solid rgba(0,0,0,0.05)}
+.kpi-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--terra);opacity:.8;margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:700;color:var(--brown);line-height:1}
+.kpi-sub{font-size:11px;color:#aaa;margin-top:4px}
+
+/* Section */
+.dash-section{background:#fff;border-radius:12px;box-shadow:0 2px 10px var(--shadow);overflow:hidden;margin-bottom:20px;border:1px solid rgba(0,0,0,0.05)}
+.dash-section-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f5ede5}
+.dash-section-title{font-size:13px;font-weight:700;color:var(--brown)}
+.dash-section-badge{background:var(--cream);color:var(--terra);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+
+/* Order rows */
+.order-row{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #faf4ef;gap:10px;transition:background .15s}
+.order-row:last-child{border-bottom:none}
+.order-row:hover{background:#fdf8f5}
+.order-mag{font-weight:600;color:var(--brown);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.order-client-badge{font-size:10px;color:#888;background:var(--cream);padding:2px 8px;border-radius:10px;white-space:nowrap}
+.order-date{font-size:11px;color:#bbb;white-space:nowrap}
+.order-total{font-weight:700;color:var(--terra);white-space:nowrap}
+.order-detail{display:none;padding:10px 18px 14px;background:#fdfaf7;border-bottom:1px solid #f5ede5}
+.order-detail table{width:100%;border-collapse:collapse;font-size:11px}
+.order-detail th{background:var(--cream);padding:5px 8px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--terra)}
+.order-detail td{padding:5px 8px;border-bottom:1px solid #f5ede5}
+.order-row.expandable{cursor:pointer}
+
+/* Commercial blocks */
+.com-block{border-bottom:1px solid #f5ede5}
+.com-block:last-child{border-bottom:none}
+.com-block-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;transition:background .15s}
+.com-block-header:hover{background:#fdf8f5}
+.com-block-name{font-size:13px;font-weight:700;color:var(--brown);display:flex;align-items:center;gap:8px}
+.com-block-stats{font-size:11px;color:#aaa;display:flex;gap:12px}
+.com-block-ca{font-size:13px;font-weight:700;color:var(--terra)}
+.com-block-body{display:none}
+.com-block-body.open{display:block}
+.chevron{font-size:11px;color:#ccc;transition:transform .2s}
+.chevron.open{transform:rotate(180deg)}
+
+/* Aucune donnée */
+.empty-state{text-align:center;padding:36px 20px;color:#c0a898;font-size:13px}
+
+/* Responsive */
+@media(max-width:640px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .dash-header{flex-direction:column;gap:10px;align-items:flex-start}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="dash-header">
+  <div>
+    <div class="dash-logo">Moulin <span>des</span> Moines</div>
+    <div class="dash-user" id="dash-user-info">Chargement…</div>
+  </div>
+  <div class="dash-header-actions">
+    <button class="btn-header primary" onclick="window.location.href='commande.html'">&#128221; Bon de commande</button>
+    <button class="btn-header" onclick="exportDashExcel()" style="border-color:rgba(80,200,120,.5);color:#a0f0b0">&#128202; Export Excel</button>
+    <button class="btn-header danger" onclick="logout()">&#x23FB; Déconnexion</button>
+  </div>
+</div>
+
+<div class="dash-body">
+  <div class="dash-title" id="dash-page-title">Tableau de bord</div>
+  <div class="dash-sub" id="dash-page-sub">Vue d&#8217;ensemble de votre activité</div>
+
+  <!-- KPI -->
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- Contenu dynamique selon rôle -->
+  <div id="dash-content"><div class="empty-state">Chargement…</div></div>
+</div>
+
+<script>
+var FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyB000QDa4c-vMjO1Xuimw58iiRvwgbF1zc",
+  authDomain:        "mdm-bdc26.firebaseapp.com",
+  projectId:         "mdm-bdc26",
+  storageBucket:     "mdm-bdc26.firebasestorage.app",
+  messagingSenderId: "52658530893",
+  appId:             "1:52658530893:web:166626ae4d681465ddca04"
+};
+
+var _db = null;
+var _fbReady = false;
+
+function initFirebase() {
+  if (_fbReady) return Promise.resolve(_db);
+  return new Promise(function(resolve, reject) {
+    if (typeof firebase === 'undefined') {
+      reject(new Error('Firebase SDK non chargé'));
+      return;
+    }
+    if (!firebase.apps || !firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    _db = firebase.firestore();
+    _fbReady = true;
+    resolve(_db);
+  });
+}
+
+// ── Comptes ──────────────────────────────────────────────────
+
+function fbLoadComptes() {
+  return initFirebase().then(function(db) {
+    return db.collection('comptes').get().then(function(snap) {
+      return snap.docs.map(function(d) { return Object.assign({_id: d.id}, d.data()); });
+    });
+  });
+}
+
+function fbSaveComptes(comptes) {
+  return initFirebase().then(function(db) {
+    var batch = db.batch();
+    // Supprimer tous puis réécrire (simple pour un petit volume)
+    return db.collection('comptes').get().then(function(snap) {
+      snap.docs.forEach(function(d) { batch.delete(d.ref); });
+      comptes.forEach(function(c) {
+        var ref = db.collection('comptes').doc(c.login);
+        batch.set(ref, c);
+      });
+      return batch.commit();
+    });
+  });
+}
+
+function fbSaveCompte(compte) {
+  return initFirebase().then(function(db) {
+    return db.collection('comptes').doc(compte.login).set(compte);
+  });
+}
+
+function fbDeleteCompte(login) {
+  return initFirebase().then(function(db) {
+    return db.collection('comptes').doc(login).delete();
+  });
+}
+
+// ── Historique commandes ─────────────────────────────────────
+
+function fbSaveOrder(login, order) {
+  return initFirebase().then(function(db) {
+    return db.collection('historique')
+      .doc(login)
+      .collection('commandes')
+      .doc(String(order.id || Date.now()))
+      .set(order);
+  });
+}
+
+function fbLoadHistory(login) {
+  return initFirebase().then(function(db) {
+    return db.collection('historique')
+      .doc(login)
+      .collection('commandes')
+      .orderBy('id', 'desc')
+      .limit(50)
+      .get()
+      .then(function(snap) {
+        return snap.docs.map(function(d) { return d.data(); });
+      });
+  });
+}
+
+function fbLoadAllHistory() {
+  return initFirebase().then(function(db) {
+    return db.collection('historique').get().then(function(snap) {
+      var promises = snap.docs.map(function(loginDoc) {
+        return loginDoc.ref.collection('commandes')
+          .orderBy('id', 'desc').limit(50).get()
+          .then(function(cmdSnap) {
+            return cmdSnap.docs.map(function(d) {
+              return Object.assign({_login: loginDoc.id}, d.data());
+            });
+          });
+      });
+      return Promise.all(promises).then(function(arrays) {
+        return [].concat.apply([], arrays).sort(function(a,b) {
+          return (b.id||0) - (a.id||0);
+        });
+      });
+    });
+  });
+}
+
+var ROLE_THEMES = {
+  client: {brown:'#78503C',terra:'#C87864',cream:'#FDF5EE',gold:'#D2B469',green:'#1A5C2E',shadow:'rgba(120,80,60,0.12)'},
+  user:   {brown:'#4A6898',terra:'#7094C8',cream:'#F2F5FB',gold:'#90B0E0',green:'#4A7C6E',shadow:'rgba(74,104,152,0.10)'},
+  admin:  {brown:'#1B2A4A',terra:'#2E4878',cream:'#F0F4FA',gold:'#A8C0E8',green:'#5B9B7A',shadow:'rgba(27,42,74,0.12)'}
+};
+
+// ── Utilitaires ───────────────────────────────────────────────
+function fmt2(n){ return typeof n==='number' ? n.toFixed(2).replace('.',',')+'\u00a0\u20ac' : '\u2014'; }
+function fmtCA(n){
+  if(!n) return '0\u00a0\u20ac';
+  if(n>=1000) return (n/1000).toFixed(1).replace('.',',')+'\u00a0k\u00a0\u20ac';
+  return n.toFixed(0)+'\u00a0\u20ac';
+}
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function logout(){
+  sessionStorage.removeItem('mdm_token');
+  window.location.href='index.html';
+}
+
+// ── Appliquer le thème selon le rôle ─────────────────────────
+function applyTheme(role){
+  var t = ROLE_THEMES[role] || ROLE_THEMES.client;
+  var r = document.documentElement;
+  r.style.setProperty('--brown', t.brown);
+  r.style.setProperty('--terra', t.terra);
+  r.style.setProperty('--cream', t.cream);
+  r.style.setProperty('--gold',  t.gold);
+  r.style.setProperty('--green', t.green||'#1A5C2E');
+  r.style.setProperty('--shadow', t.shadow||'rgba(120,80,60,0.10)');
+}
+
+// ── KPI helper ────────────────────────────────────────────────
+function setKPI(id, val, sub){
+  var el=document.getElementById(id);
+  if(el){
+    el.querySelector('.kpi-val').textContent=val;
+    if(sub) el.querySelector('.kpi-sub').textContent=sub;
+  }
+}
+function makeKPI(id,label,val,sub){
+  return '<div class="kpi-card" id="'+id+'">'
+    +'<div class="kpi-label">'+label+'</div>'
+    +'<div class="kpi-val">'+val+'</div>'
+    +'<div class="kpi-sub">'+sub+'</div>'
+    +'</div>';
+}
+
+// ── Toggle détail commande ────────────────────────────────────
+function toggleOrder(row){
+  var detail = row.nextElementSibling;
+  if(!detail) return;
+  var open = detail.style.display==='block';
+  detail.style.display = open ? 'none' : 'block';
+}
+function toggleComBlock(header){
+  var body   = header.nextElementSibling;
+  var chev   = header.querySelector('.chevron');
+  if(!body) return;
+  var open   = body.classList.toggle('open');
+  if(chev) chev.classList.toggle('open', open);
+}
+
+// ── Construire une ligne commande ─────────────────────────────
+function orderRow(o, clientNom, showClient){
+  var date = o.date ? String(o.date).split(' ')[0] : '?';
+  var tn   = fmt2(o.totalNet);
+  var refs = o.nbRefs||(o.articles?o.articles.length:'?');
+  var cols = o.nbColis||'?';
+  var html = '<div class="order-row expandable" onclick="toggleOrder(this)">'
+    +'<span class="order-mag">'+escH(o.magasin||clientNom||'?')+'</span>'
+    +(showClient?'<span class="order-client-badge">'+escH(clientNom||'')+'</span>':'<span class="order-client-badge">'+refs+' réf. · '+cols+' colis</span>')
+    +'<span class="order-date">'+date+'</span>'
+    +'<span class="order-total">'+tn+'</span>'
+    +'</div>';
+  // Détail articles
+  html += '<div class="order-detail">';
+  if(o.articles && o.articles.length){
+    html += '<table><thead><tr><th>Code</th><th>Désignation</th><th>Qté</th><th>Total HT</th></tr></thead><tbody>';
+    o.articles.forEach(function(a){
+      html += '<tr>'
+        +'<td style="font-family:monospace;color:var(--brown)">'+escH(a.code||'')+'</td>'
+        +'<td>'+escH(a.libelle||'')+'</td>'
+        +'<td style="text-align:center">'+a.qty+'</td>'
+        +'<td style="text-align:right;font-weight:600;color:var(--terra)">'+fmt2(a.totalHT)+'</td>'
+        +'</tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div style="color:#ccc;font-size:11px;text-align:center;padding:6px">Détail non disponible</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ── DASHBOARD CLIENT ──────────────────────────────────────────
+function renderClient(data){
+  window._currentData = data;
+  var _allCd=[];try{_allCd=JSON.parse(localStorage.getItem("mdm_comptes")||"[]");}catch(e){}
+  chatInit(data.login,data.nom||data.login,data.role,data.commercial||"",_allCd);
+  document.getElementById('dash-page-title').textContent = 'Bonjour, '+escH(data.nom||data.login)+' \u2728';
+  document.getElementById('dash-page-sub').textContent   = 'Retrouvez ici l\u2019historique de vos commandes.';
+
+  var login = (data.login||'guest').replace(/[^a-zA-Z0-9_-]/g,'_');
+  var franco= parseFloat(data.franco)||0;
+
+  // KPI placeholders
+  var kpis = makeKPI('kpi-orders','Commandes','\u2014','passées')
+    + makeKPI('kpi-ca','Total HT','\u2014','cumul commandes')
+    + makeKPI('kpi-last','Dernière commande','\u2014','date')
+    + (franco>0 ? makeKPI('kpi-franco','Franco de port',franco.toFixed(0)+'\u00a0\u20ac','minimum HT') : '');
+  document.getElementById('kpi-grid').innerHTML = kpis;
+
+  // Charger historique
+  var local=[];
+  try{local=JSON.parse(localStorage.getItem('mdm_history_'+login)||'[]');}catch(e){}
+  renderClientOrders(local, franco);
+
+  fbLoadHistory(login).then(function(fbOrders){
+    if(!fbOrders||!fbOrders.length) return;
+    var ids={}; local.forEach(function(o){ids[o.id]=true;});
+    fbOrders.forEach(function(o){if(!ids[o.id]){local.push(o);ids[o.id]=true;}});
+    local.sort(function(a,b){return (b.id||0)-(a.id||0);});
+    if(local.length>50) local=local.slice(0,50);
+    localStorage.setItem('mdm_history_'+login,JSON.stringify(local));
+    renderClientOrders(local, franco);
+  }).catch(function(){});
+}
+
+function renderClientOrders(orders, franco){
+  var nb  = orders.length;
+  var ca  = orders.reduce(function(s,o){return s+(o.totalNet||0);},0);
+  var last= orders[0];
+  setKPI('kpi-orders', nb, nb===0?'aucune':nb>1?'commandes':'commande');
+  setKPI('kpi-ca', fmtCA(ca), 'cumul commandes');
+  if(last){
+    var d = last.date?String(last.date).split(' ')[0]:'?';
+    setKPI('kpi-last', d, fmt2(last.totalNet));
+  }
+  var content = document.getElementById('dash-content');
+  if(!content) return;
+  if(!orders.length){
+    content.innerHTML = '<div class="dash-section"><div class="empty-state">Aucune commande enregistrée.\nPassez votre première commande !</div></div>';
+    return;
+  }
+  var html = '<div class="dash-section">'
+    +'<div class="dash-section-header">'
+    +'<span class="dash-section-title">\u23f3 Historique de mes commandes</span>'
+    +'<span class="dash-section-badge">'+nb+' commande'+(nb>1?'s':'')+'</span>'
+    +'</div>';
+  orders.forEach(function(o){ html += orderRow(o, null, false); });
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+// ── DASHBOARD COMMERCIAL ──────────────────────────────────────
+function renderCommercial(data){
+  window._currentData = data;
+  var _allCd=[];try{_allCd=JSON.parse(localStorage.getItem("mdm_comptes")||"[]");}catch(e){}
+  chatInit(data.login,data.nom||data.login,data.role,data.commercial||"",_allCd);
+  document.getElementById('dash-page-title').textContent = 'Bonjour, '+escH(data.nom||data.login)+' \u2728';
+  document.getElementById('dash-page-sub').textContent   = 'Activité de vos clients assignés.';
+
+  var login = data.login||'';
+  var allComptes=[];
+  try{allComptes=JSON.parse(localStorage.getItem('mdm_comptes')||'[]');}catch(e){}
+  var clients = allComptes.filter(function(co){return co.role==='client'&&co.commercial===login;});
+
+  var kpis = makeKPI('kpi-clients','Mes clients',clients.length,'assignés')
+    + makeKPI('kpi-orders','Commandes','\u2014','enregistrées')
+    + makeKPI('kpi-ca','CA total HT','\u2014','cumul clients')
+    + makeKPI('kpi-avg','Commande moy.','\u2014','par commande');
+  document.getElementById('kpi-grid').innerHTML = kpis;
+
+  if(!clients.length){
+    document.getElementById('dash-content').innerHTML = '<div class="dash-section"><div class="empty-state">Aucun client assigné.</div></div>';
+    return;
+  }
+
+  var logins = clients.map(function(co){return co.login.replace(/[^a-zA-Z0-9_-]/g,'_');});
+  var promises = logins.map(function(lg){
+    return fbLoadHistory(lg).then(function(orders){
+      return (orders||[]).map(function(o){return Object.assign({},o,{_login:lg});});
+    }).catch(function(){
+      var local=[];
+      try{local=JSON.parse(localStorage.getItem('mdm_history_'+lg)||'[]');}catch(e){}
+      return local.map(function(o){return Object.assign({},o,{_login:lg});});
+    });
+  });
+
+  Promise.all(promises).then(function(arrays){
+    var all=[].concat.apply([],arrays);
+    var ids={}; all=all.filter(function(o){if(ids[o.id])return false;ids[o.id]=true;return true;});
+    all.sort(function(a,b){return (b.id||0)-(a.id||0);});
+
+    var nb  = all.length;
+    var ca  = all.reduce(function(s,o){return s+(o.totalNet||0);},0);
+    var avg = nb>0?ca/nb:0;
+    setKPI('kpi-orders', nb, 'enregistrées');
+    setKPI('kpi-ca',  fmtCA(ca),  'cumul clients');
+    setKPI('kpi-avg', fmtCA(avg), 'par commande');
+
+    var content = document.getElementById('dash-content');
+    if(!content) return;
+    if(!all.length){
+      content.innerHTML = '<div class="dash-section"><div class="empty-state">Aucune commande enregistrée.</div></div>';
+      return;
+    }
+    var html = '<div class="dash-section">'
+      +'<div class="dash-section-header">'
+      +'<span class="dash-section-title">\u23f3 Dernières commandes de mes clients</span>'
+      +'<span class="dash-section-badge">'+nb+' commande'+(nb>1?'s':'')+'</span>'
+      +'</div>';
+    all.forEach(function(o){
+      var client = clients.find(function(co){return co.login.replace(/[^a-zA-Z0-9_-]/g,'_')===o._login;});
+      html += orderRow(o, client?client.nom:o._login, true);
+    });
+    html += '</div>';
+    content.innerHTML = html;
+  });
+}
+
+// ── DASHBOARD ADMIN ───────────────────────────────────────────
+function renderAdmin(data){
+  window._currentData = data;
+  document.getElementById('dash-page-title').textContent = 'Tableau de bord admin';
+  document.getElementById('dash-page-sub').textContent   = 'Toutes les commandes classées par commercial.';
+
+  var allComptes=[];
+  try{allComptes=JSON.parse(localStorage.getItem('mdm_comptes')||'[]');}catch(e){}
+  var clients     = allComptes.filter(function(c){return c.role==='client';});
+  var commerciaux = allComptes.filter(function(c){return c.role==='user';});
+
+  var kpis = makeKPI('kpi-clients','Clients',clients.length,'actifs')
+    + makeKPI('kpi-com','Commerciaux',commerciaux.length,'actifs')
+    + makeKPI('kpi-orders','Commandes','\u2014','enregistrées')
+    + makeKPI('kpi-ca','CA total HT','\u2014','cumul all');
+  document.getElementById('kpi-grid').innerHTML = kpis;
+
+  var logins = clients.map(function(co){return co.login.replace(/[^a-zA-Z0-9_-]/g,'_');});
+  if(!logins.length){
+    document.getElementById('dash-content').innerHTML='<div class="dash-section"><div class="empty-state">Aucun client.</div></div>';
+    return;
+  }
+
+  var promises = logins.map(function(lg){
+    return fbLoadHistory(lg).then(function(orders){
+      return (orders||[]).map(function(o){return Object.assign({},o,{_login:lg});});
+    }).catch(function(){
+      var local=[];
+      try{local=JSON.parse(localStorage.getItem('mdm_history_'+lg)||'[]');}catch(e){}
+      return local.map(function(o){return Object.assign({},o,{_login:lg});});
+    });
+  });
+
+  Promise.all(promises).then(function(arrays){
+    var all=[].concat.apply([],arrays);
+    var ids={}; all=all.filter(function(o){if(ids[o.id])return false;ids[o.id]=true;return true;});
+    all.sort(function(a,b){return (b.id||0)-(a.id||0);});
+
+    setKPI('kpi-orders', all.length, 'enregistrées');
+    setKPI('kpi-ca', fmtCA(all.reduce(function(s,o){return s+(o.totalNet||0);},0)), 'cumul all');
+
+    // Grouper par commercial
+    var clientComMap={};
+    clients.forEach(function(co){
+      clientComMap[co.login.replace(/[^a-zA-Z0-9_-]/g,'_')]=co.commercial||'__aucun__';
+    });
+    var comNameMap={};
+    commerciaux.forEach(function(co){comNameMap[co.login]=co.nom;});
+
+    var byCommercial={};
+    all.forEach(function(o){
+      var com=clientComMap[o._login]||'__aucun__';
+      if(!byCommercial[com])byCommercial[com]=[];
+      byCommercial[com].push(o);
+    });
+
+    var keys=Object.keys(byCommercial).sort(function(a,b){
+      if(a==='__aucun__')return 1; if(b==='__aucun__')return -1;
+      return (comNameMap[a]||a).localeCompare(comNameMap[b]||b);
+    });
+
+    var content=document.getElementById('dash-content');
+    if(!content)return;
+    var html='<div class="dash-section">'
+      +'<div class="dash-section-header"><span class="dash-section-title">\u23f3 Commandes par commercial</span></div>';
+
+    keys.forEach(function(comLogin,i){
+      var orders=byCommercial[comLogin];
+      var nom=comLogin==='__aucun__'?'Sans commercial':comNameMap[comLogin]||comLogin;
+      var ca=orders.reduce(function(s,o){return s+(o.totalNet||0);},0);
+      var nbCli=clients.filter(function(co){
+        return (co.commercial||'__aucun__')===(comLogin==='__aucun__'?'__aucun__':comLogin)||
+               (comLogin==='__aucun__'&&!co.commercial);
+      }).length;
+
+      html+='<div class="com-block">'
+        +'<div class="com-block-header" onclick="toggleComBlock(this)">'
+        +'<div class="com-block-name">\u{1F4BC} '+escH(nom)
+        +'<span class="com-block-stats">'
+        +nbCli+' client'+(nbCli>1?'s':'')+' · '+orders.length+' commande'+(orders.length>1?'s':'')+''
+        +'</span></div>'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<span class="com-block-ca">'+fmtCA(ca)+'</span>'
+        +'<span class="chevron'+(i===0?' open':'')+'">▼</span>'
+        +'</div></div>'
+        +'<div class="com-block-body'+(i===0?' open':'')+'">';
+
+      orders.forEach(function(o){
+        var client=clients.find(function(co){return co.login.replace(/[^a-zA-Z0-9_-]/g,'_')===o._login;});
+        html+=orderRow(o, client?client.nom:o._login, true);
+      });
+      html+='</div></div>';
+    });
+    html+='</div>';
+    content.innerHTML=html;
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────
+(function(){
+  var token=sessionStorage.getItem('mdm_token');
+  if(!token){ window.location.href='index.html'; return; }
+  var data;
+  try{ data=JSON.parse(_safeB64Decode(token)); }catch(e){ sessionStorage.removeItem('mdm_token'); window.location.href='index.html'; return; }
+  if(!data.exp||Date.now()>data.exp){ sessionStorage.removeItem('mdm_token'); window.location.href='index.html'; return; }
+
+  applyTheme(data.role);
+
+  var userInfo=document.getElementById('dash-user-info');
+  if(userInfo) userInfo.innerHTML='&#128100; '+escH(data.nom||data.login)
+    +'<br><span style="opacity:.6;font-size:10px">'+escH(data.role==='user'?'Commercial':(data.role==='admin'?'Administrateur':'Client'))+'</span>';
+
+  if(data.role==='client')     renderClient(data);
+  else if(data.role==='user')  renderCommercial(data);
+  else if(data.role==='admin') renderAdmin(data);
+  else window.location.href='commande.html';
+})();
+
+// ── Export Excel dashboard ────────────────────────────────────
+function exportDashExcel(){
+  if(typeof XLSX==='undefined'){ alert('SheetJS non chargé'); return; }
+
+  var role = _currentData ? _currentData.role : 'client';
+  var wb   = XLSX.utils.book_new();
+
+  if(role === 'client'){
+    _exportClientExcel(wb);
+  } else if(role === 'user'){
+    _exportCommercialExcel(wb);
+  } else if(role === 'admin'){
+    _exportAdminExcel(wb);
+  }
+}
+
+function _fmtDate(d){ return d ? String(d).split(' ')[0] : ''; }
+
+function _exportClientExcel(wb){
+  // Feuille : toutes mes commandes
+  var login=(window._currentData.login||'guest').replace(/[^a-zA-Z0-9_-]/g,'_');
+  var orders=[];
+  try{orders=JSON.parse(localStorage.getItem('mdm_history_'+login)||'[]');}catch(e){}
+
+  var rows=[['Date','Magasin','Nb références','Nb colis','Total Brut HT','Remise %','Total Net HT']];
+  orders.forEach(function(o){
+    rows.push([_fmtDate(o.date), o.magasin||'', o.nbRefs||0, o.nbColis||0,
+      o.totalBrut||0, o.remise||0, o.totalNet||0]);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:25},{wch:14},{wch:10},{wch:15},{wch:10},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Mes commandes');
+
+  // Feuille détail articles (dernière commande)
+  if(orders.length && orders[0].articles && orders[0].articles.length){
+    var rows2=[['Code','Désignation','Qté','PCB','PU HT','Total HT']];
+    orders[0].articles.forEach(function(a){
+      rows2.push([a.code||'',a.libelle||'',a.qty||0,a.pcb||1,a.puHT||0,a.totalHT||0]);
+    });
+    var ws2=XLSX.utils.aoa_to_sheet(rows2);
+    ws2['!cols']=[{wch:14},{wch:35},{wch:6},{wch:6},{wch:10},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Dernière commande');
+  }
+
+  var nom = (window._currentData.nom||'client').replace(/[^a-zA-Z0-9]/g,'_');
+  XLSX.writeFile(wb, 'commandes_'+nom+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function _exportCommercialExcel(wb){
+  var login = window._currentData.login||'';
+  var allComptes=[];
+  try{allComptes=JSON.parse(localStorage.getItem('mdm_comptes')||'[]');}catch(e){}
+  var clients=allComptes.filter(function(c){return c.role==='client'&&c.commercial===login;});
+
+  // Feuille résumé clients
+  var rows=[['Client','Login','Email','Groupement','Remise %','Nb commandes','Total HT']];
+  clients.forEach(function(co){
+    var lg=co.login.replace(/[^a-zA-Z0-9_-]/g,'_');
+    var hist=[];
+    try{hist=JSON.parse(localStorage.getItem('mdm_history_'+lg)||'[]');}catch(e){}
+    var ca=hist.reduce(function(s,o){return s+(o.totalNet||0);},0);
+    rows.push([co.nom||'',co.login||'',co.email||'',co.groupement||'',co.remise||0,hist.length,Math.round(ca*100)/100]);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:25},{wch:15},{wch:28},{wch:15},{wch:10},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Mes clients');
+
+  // Feuille toutes les commandes
+  var rows2=[['Date','Client','Magasin','Nb références','Nb colis','Total Net HT']];
+  clients.forEach(function(co){
+    var lg=co.login.replace(/[^a-zA-Z0-9_-]/g,'_');
+    var hist=[];
+    try{hist=JSON.parse(localStorage.getItem('mdm_history_'+lg)||'[]');}catch(e){}
+    hist.forEach(function(o){
+      rows2.push([_fmtDate(o.date),co.nom||co.login,o.magasin||'',o.nbRefs||0,o.nbColis||0,o.totalNet||0]);
+    });
+  });
+  rows2.sort(function(a,b){return String(b[0]).localeCompare(String(a[0]));});
+  var ws2=XLSX.utils.aoa_to_sheet(rows2);
+  ws2['!cols']=[{wch:14},{wch:25},{wch:25},{wch:12},{wch:10},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Toutes les commandes');
+
+  var nom=(window._currentData.nom||'commercial').replace(/[^a-zA-Z0-9]/g,'_');
+  XLSX.writeFile(wb, 'dashboard_'+nom+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function _exportAdminExcel(wb){
+  var allComptes=[];
+  try{allComptes=JSON.parse(localStorage.getItem('mdm_comptes')||'[]');}catch(e){}
+  var clients=allComptes.filter(function(c){return c.role==='client';});
+  var coms   =allComptes.filter(function(c){return c.role==='user';});
+  var comMap ={};
+  coms.forEach(function(c){comMap[c.login]=c.nom;});
+
+  // Feuille toutes les commandes
+  var rows=[['Date','Client','Magasin','Commercial','Groupement','Nb références','Nb colis','Total Net HT']];
+  var all=[];
+  clients.forEach(function(co){
+    var lg=co.login.replace(/[^a-zA-Z0-9_-]/g,'_');
+    var hist=[];
+    try{hist=JSON.parse(localStorage.getItem('mdm_history_'+lg)||'[]');}catch(e){}
+    hist.forEach(function(o){
+      all.push([_fmtDate(o.date),co.nom||co.login,o.magasin||'',
+        comMap[co.commercial||'']||co.commercial||'',
+        co.groupement||'',o.nbRefs||0,o.nbColis||0,o.totalNet||0]);
+    });
+  });
+  all.sort(function(a,b){return String(b[0]).localeCompare(String(a[0]));});
+  rows=rows.concat(all);
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:25},{wch:25},{wch:20},{wch:15},{wch:12},{wch:10},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Toutes les commandes');
+
+  // Feuille CA par commercial
+  var rows2=[['Commercial','Nb clients','Nb commandes','CA total HT']];
+  var bycom={};
+  clients.forEach(function(co){
+    var com=co.commercial||'__aucun__';
+    if(!bycom[com]) bycom[com]={clients:0,orders:0,ca:0,nom:comMap[com]||com};
+    bycom[com].clients++;
+    var lg=co.login.replace(/[^a-zA-Z0-9_-]/g,'_');
+    var hist=[];
+    try{hist=JSON.parse(localStorage.getItem('mdm_history_'+lg)||'[]');}catch(e){}
+    bycom[com].orders+=hist.length;
+    bycom[com].ca+=hist.reduce(function(s,o){return s+(o.totalNet||0);},0);
+  });
+  Object.keys(bycom).sort().forEach(function(k){
+    var v=bycom[k];
+    rows2.push([v.nom==='__aucun__'?'Sans commercial':v.nom,v.clients,v.orders,Math.round(v.ca*100)/100]);
+  });
+  var ws2=XLSX.utils.aoa_to_sheet(rows2);
+  ws2['!cols']=[{wch:25},{wch:12},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'CA par commercial');
+
+  XLSX.writeFile(wb, 'dashboard_admin_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function _safeB64Decode(str){
+  try{ return decodeURIComponent(escape(atob(str))); }
+  catch(e){ try{ return decodeURIComponent(atob(str)); }catch(e2){ return atob(str); } }
+}
+</script>
+
+<footer style="text-align:center;padding:16px;font-size:11px;color:#b09080;border-top:1px solid rgba(0,0,0,.06);margin-top:auto">&copy; 2026 Moulin des Moines &nbsp;&middot;&nbsp; <a href="mentions-legales.html" style="color:inherit;opacity:.7;text-decoration:none">Mentions l&eacute;gales &amp; RGPD</a></footer>
+<!-- ══ CHAT MDM ══ -->
+<style>
+.chat-fab{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:var(--brown,#78503C);color:#fff;border:none;cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(0,0,0,.22);z-index:150;transition:transform .2s,background .2s}
+.chat-fab:hover{transform:scale(1.08);background:var(--terra,#C87864)}
+.chat-fab-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:10px;min-width:18px;text-align:center;display:none}
+.chat-modal{position:fixed;bottom:88px;right:24px;width:360px;max-height:520px;background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);display:none;flex-direction:column;z-index:151;overflow:hidden;border:1px solid rgba(0,0,0,.08)}
+.chat-modal.open{display:flex}
+.chat-header{background:var(--brown,#78503C);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.chat-header-left{display:flex;align-items:center;gap:10px}
+.chat-avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.chat-header-name{font-size:13px;font-weight:700}.chat-header-status{font-size:10px;opacity:.7;margin-top:1px}
+.chat-close{background:none;border:none;color:#fff;cursor:pointer;font-size:18px;opacity:.7;padding:4px;line-height:1}
+.chat-close:hover{opacity:1}
+.chat-client-selector{padding:10px 12px;border-bottom:1px solid #f0e8e0;flex-shrink:0;display:none}
+.chat-client-selector select{width:100%;padding:7px 10px;border:1px solid #e0d0c4;border-radius:6px;font-family:inherit;font-size:12px;outline:none;background:#fff}
+.chat-messages{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:8px;min-height:200px}
+.chat-messages::-webkit-scrollbar{width:4px}.chat-messages::-webkit-scrollbar-thumb{background:#e0d0c4;border-radius:4px}
+.chat-msg{display:flex;flex-direction:column;max-width:78%}
+.chat-msg.mine{align-self:flex-end;align-items:flex-end}.chat-msg.theirs{align-self:flex-start;align-items:flex-start}
+.chat-bubble{padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word}
+.chat-msg.mine .chat-bubble{background:var(--brown,#78503C);color:#fff;border-bottom-right-radius:4px}
+.chat-msg.theirs .chat-bubble{background:#f5ede5;color:#3a2a20;border-bottom-left-radius:4px}
+.chat-time{font-size:10px;color:#b0988a;margin-top:3px;padding:0 4px}
+.chat-sender{font-size:10px;color:#b0988a;margin-bottom:2px;padding:0 4px;font-weight:600}
+.chat-empty{text-align:center;padding:40px 20px;color:#b0988a;font-size:12px}
+.chat-loading{text-align:center;padding:20px;color:#b0988a;font-size:12px}
+.chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid #f0e8e0;flex-shrink:0;background:#fdfaf7}
+.chat-input{flex:1;padding:9px 12px;border:1.5px solid #e0d0c4;border-radius:20px;font-family:inherit;font-size:13px;outline:none;resize:none;max-height:80px;line-height:1.4;transition:border .2s}
+.chat-input:focus{border-color:var(--terra,#C87864)}
+.chat-send{background:var(--brown,#78503C);color:#fff;border:none;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:16px}
+.chat-send:hover{background:var(--terra,#C87864)}.chat-send:disabled{background:#c0a898;cursor:not-allowed}
+@media(max-width:480px){.chat-modal{width:calc(100vw - 16px);right:8px;bottom:80px}.chat-fab{bottom:16px;right:16px}}
+</style>
+<button class="chat-fab no-print" id="chat-fab" onclick="chatToggle()" title="Messagerie" style="display:none">&#128172;<span class="chat-fab-badge" id="chat-badge"></span></button>
+<div class="chat-modal" id="chat-modal">
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <div class="chat-avatar" id="chat-avatar">?</div>
+      <div><div class="chat-header-name" id="chat-header-name">Messagerie</div><div class="chat-header-status" id="chat-header-status">Chargement&#8230;</div></div>
+    </div>
+    <button class="chat-close" onclick="chatToggle()">&#10005;</button>
+  </div>
+  <div class="chat-client-selector" id="chat-client-selector">
+    <select id="chat-client-select" onchange="chatSelectClient(this.value)"><option value="">&#8212; Choisir un client &#8212;</option></select>
+  </div>
+  <div class="chat-messages" id="chat-messages"><div class="chat-loading">&#8987; Chargement&#8230;</div></div>
+  <div class="chat-input-row">
+    <textarea class="chat-input" id="chat-input" placeholder="Votre message&#8230;" rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend();}"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
+    <button class="chat-send" id="chat-send" onclick="chatSend()" disabled>&#10148;</button>
+  </div>
+</div>
+<script>
+// ══════════════════════════════════════════════════════════════
+// MODULE CHAT MDM — Firebase Firestore temps réel
+// Collection : chats/{convId}/messages
+// convId = loginClient + "_" + loginCommercial
+// ══════════════════════════════════════════════════════════════
+
+var _chatOpen        = false;
+var _chatConvId      = null;   // conversation active
+var _chatMyLogin     = null;
+var _chatMyNom       = null;
+var _chatMyRole      = null;
+var _chatPartnerNom  = null;
+var _chatUnsubscribe = null;   // listener Firestore
+var _chatClients     = [];     // liste clients du commercial
+var _chatUnread      = 0;
+
+// ── Initialisation depuis le token ───────────────────────────
+function chatInit(login, nom, role, commercial, allComptes){
+  _chatMyLogin = login;
+  _chatMyNom   = nom;
+  _chatMyRole  = role;
+
+  var fab = document.getElementById('chat-fab');
+
+  if(role === 'client' && commercial){
+    // Client : conversation avec son commercial
+    _chatConvId     = login + '_' + commercial;
+    _chatPartnerNom = _getCommercialNom(commercial, allComptes);
+    _setChatHeader(_chatPartnerNom, 'Commercial MDM');
+    if(fab) fab.style.display = 'flex';
+    chatLoadUnread();
+
+  } else if(role === 'user'){
+    // Commercial : voir ses clients
+    _chatClients = (allComptes||[]).filter(function(c){
+      return c.role === 'client' && c.commercial === login;
+    });
+    if(_chatClients.length > 0){
+      _fillClientSelector();
+      var sel = document.getElementById('chat-client-selector');
+      if(sel) sel.style.display = 'block';
+      _setChatHeader('Messagerie clients', _chatClients.length + ' client(s)');
+      if(fab) fab.style.display = 'flex';
+      chatLoadAllUnread();
+    }
+  }
+}
+
+function _getCommercialNom(login, allComptes){
+  var co = (allComptes||[]).find(function(c){ return c.login === login; });
+  return co ? co.nom : login;
+}
+
+function _setChatHeader(name, status){
+  var n = document.getElementById('chat-header-name');
+  var s = document.getElementById('chat-header-status');
+  var a = document.getElementById('chat-avatar');
+  if(n) n.textContent = name;
+  if(s) s.textContent = status;
+  if(a) a.textContent = name.substring(0,2).toUpperCase();
+}
+
+function _fillClientSelector(){
+  var sel = document.getElementById('chat-client-select');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">&#8212; Choisir un client &#8212;</option>';
+  _chatClients.forEach(function(c){
+    var opt = document.createElement('option');
+    opt.value = c.login;
+    opt.textContent = c.nom || c.login;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Ouvrir/fermer ─────────────────────────────────────────────
+function chatToggle(){
+  _chatOpen = !_chatOpen;
+  var modal = document.getElementById('chat-modal');
+  if(modal) modal.classList.toggle('open', _chatOpen);
+  if(_chatOpen){
+    if(_chatConvId) chatSubscribe(_chatConvId);
+    _chatUnread = 0;
+    _updateBadge(0);
+    setTimeout(function(){ chatScrollBottom(); }, 100);
+  } else {
+    chatUnsubscribe();
+  }
+}
+
+function chatSelectClient(clientLogin){
+  if(!clientLogin) return;
+  var client = _chatClients.find(function(c){ return c.login === clientLogin; });
+  if(!client) return;
+  _chatConvId    = clientLogin + '_' + _chatMyLogin;
+  _chatPartnerNom = client.nom || clientLogin;
+  _setChatHeader(client.nom || clientLogin, 'Client');
+  chatSubscribe(_chatConvId);
+  // Activer le champ de saisie
+  var sendBtn = document.getElementById('chat-send');
+  if(sendBtn) sendBtn.disabled = false;
+}
+
+// ── Firestore listener ────────────────────────────────────────
+function chatSubscribe(convId){
+  chatUnsubscribe();
+  var container = document.getElementById('chat-messages');
+  if(container) container.innerHTML = '<div class="chat-loading">&#8987; Chargement&#8230;</div>';
+
+  initFirebase().then(function(db){
+    var ref = db.collection('chats').doc(convId).collection('messages')
+               .orderBy('ts', 'asc').limitToLast(60);
+
+    _chatUnsubscribe = ref.onSnapshot(function(snap){
+      _renderMessages(snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); }));
+      // Activer saisie
+      var sendBtn = document.getElementById('chat-send');
+      if(sendBtn) sendBtn.disabled = false;
+    }, function(err){
+      console.warn('Chat erreur:', err);
+    });
+  }).catch(function(e){
+    console.warn('Chat Firebase:', e);
+  });
+}
+
+function chatUnsubscribe(){
+  if(_chatUnsubscribe){ _chatUnsubscribe(); _chatUnsubscribe = null; }
+}
+
+// ── Affichage des messages ────────────────────────────────────
+function _renderMessages(msgs){
+  var container = document.getElementById('chat-messages');
+  if(!container) return;
+
+  if(!msgs.length){
+    container.innerHTML = '<div class="chat-empty">Aucun message. Commencez la conversation&#160;!</div>';
+    return;
+  }
+
+  var html = '';
+  msgs.forEach(function(m){
+    var mine = m.from === _chatMyLogin;
+    var time = m.ts ? new Date(m.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
+    var date = m.ts ? new Date(m.ts).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : '';
+    html += '<div class="chat-msg ' + (mine?'mine':'theirs') + '">';
+    if(!mine) html += '<div class="chat-sender">' + _escH(m.fromNom||m.from) + '</div>';
+    html += '<div class="chat-bubble">' + _escH(m.text) + '</div>';
+    html += '<div class="chat-time">' + date + ' ' + time + '</div>';
+    html += '</div>';
+  });
+  container.innerHTML = html;
+  chatScrollBottom();
+}
+
+function chatScrollBottom(){
+  var c = document.getElementById('chat-messages');
+  if(c) c.scrollTop = c.scrollHeight;
+}
+
+// ── Envoyer un message ────────────────────────────────────────
+function chatSend(){
+  var input = document.getElementById('chat-input');
+  if(!input) return;
+  var text = input.value.trim();
+  if(!text || !_chatConvId) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  var msg = {
+    from:    _chatMyLogin,
+    fromNom: _chatMyNom,
+    text:    text,
+    ts:      Date.now(),
+    read:    false
+  };
+
+  initFirebase().then(function(db){
+    return db.collection('chats').doc(_chatConvId)
+             .collection('messages').add(msg);
+  }).then(function(){
+    // Mettre à jour le dernier message sur le doc parent
+    return initFirebase().then(function(db){
+      return db.collection('chats').doc(_chatConvId).set({
+        lastMsg: text,
+        lastTs:  msg.ts,
+        lastFrom: _chatMyLogin,
+        participants: _chatConvId.split('_')
+      }, {merge: true});
+    });
+  }).catch(function(e){ console.warn('Chat send:', e); });
+}
+
+// ── Comptage des messages non lus ─────────────────────────────
+function chatLoadUnread(){
+  if(!_chatConvId) return;
+  initFirebase().then(function(db){
+    return db.collection('chats').doc(_chatConvId)
+             .collection('messages')
+             .where('from', '!=', _chatMyLogin)
+             .where('read', '==', false)
+             .get();
+  }).then(function(snap){
+    _updateBadge(snap.size);
+  }).catch(function(){});
+}
+
+function chatLoadAllUnread(){
+  // Commercial : compter les non lus de tous ses clients
+  if(!_chatClients.length) return;
+  var total = 0;
+  var promises = _chatClients.map(function(c){
+    var convId = c.login + '_' + _chatMyLogin;
+    return initFirebase().then(function(db){
+      return db.collection('chats').doc(convId)
+               .collection('messages')
+               .where('from', '!=', _chatMyLogin)
+               .where('read', '==', false)
+               .get();
+    }).then(function(snap){ total += snap.size; })
+    .catch(function(){});
+  });
+  Promise.all(promises).then(function(){ _updateBadge(total); });
+}
+
+function _updateBadge(count){
+  _chatUnread = count;
+  var badge = document.getElementById('chat-badge');
+  if(!badge) return;
+  if(count > 0){
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function _escH(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+</script>
+</body>
+</html>
