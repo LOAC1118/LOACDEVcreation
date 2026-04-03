@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Kit CRM — Configuration</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --c:#6366f1;--cf:#4f46e5;--cl:#818cf8;--cp:rgba(99,102,241,.08);
+  --s100:#0f172a;--s200:#1e293b;--s400:#64748b;--s500:#94a3b8;
+  --s700:#e2e8f0;--s800:#f1f5f9;--border:rgba(0,0,0,.08);
+  --fd:'Inter',sans-serif;--fdisp:'Cal Sans','DM Serif Display',serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Serif+Display&display=swap');
+body{font-family:var(--fd);background:#f8faff;color:var(--s200);font-size:14px;min-height:100vh;}
+
+/* TOP */
+.top{background:#fff;border-bottom:1px solid var(--border);padding:.85rem 2rem;display:flex;align-items:center;gap:12px;}
+.top-ico{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#818cf8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;}
+.top-name{font-weight:700;font-size:.95rem;color:var(--s100);}
+.top-sub{font-size:.72rem;color:var(--s500);}
+.badge{background:var(--cp);color:var(--c);border:1px solid rgba(99,102,241,.2);font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:20px;letter-spacing:.06em;text-transform:uppercase;margin-left:auto;}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 57px);}
+
+/* SIDEBAR STEPS */
+.sidebar{background:#fff;border-right:1px solid var(--border);padding:1.5rem 0;}
+.step-item{display:flex;align-items:center;gap:.75rem;padding:.6rem 1.25rem;cursor:pointer;transition:all .15s;border-left:2px solid transparent;}
+.step-item.active{border-left-color:var(--c);background:var(--cp);}
+.step-item.done .step-num{background:var(--c);color:#fff;}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--s700);color:var(--s500);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step-item.active .step-num{background:var(--c);color:#fff;}
+.step-label{font-size:.8rem;color:var(--s400);}
+.step-item.active .step-label{color:var(--c);font-weight:600;}
+
+/* MAIN */
+.main{padding:2rem;}
+.section{display:none;}.section.active{display:block;}
+.section-title{font-size:1.5rem;font-weight:700;color:var(--s100);margin-bottom:.35rem;}
+.section-sub{font-size:.83rem;color:var(--s500);margin-bottom:2rem;line-height:1.6;}
+
+/* CARDS */
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.25rem;}
+.card h3{font-size:.88rem;font-weight:700;color:var(--s100);margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--border);}
+
+/* FORM */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:.85rem;}
+.fg.three{grid-template-columns:1fr 1fr 1fr;}
+.fg.full{grid-template-columns:1fr;}
+.fgrp{display:flex;flex-direction:column;gap:.3rem;}
+.flabel{font-size:.68rem;font-weight:600;color:var(--s400);letter-spacing:.06em;text-transform:uppercase;}
+.finput{background:var(--s800);border:1px solid var(--s700);border-radius:7px;color:var(--s100);font-family:var(--fd);font-size:.83rem;padding:8px 11px;width:100%;transition:border-color .2s;}
+.finput:focus{outline:none;border-color:var(--c);background:#fff;}
+.finput::placeholder{color:var(--s500);}
+select.finput option{background:#fff;}
+
+/* COLOR PICKER */
+.color-row{display:flex;align-items:center;gap:.75rem;}
+.color-swatch{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;}
+input[type=color]{opacity:0;position:absolute;pointer-events:none;}
+
+/* PREVIEW */
+.preview-bar{border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:12px;margin-top:.75rem;}
+.preview-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.preview-name{font-weight:700;font-size:.95rem;}
+
+/* DROP ZONE */
+.drop{border:2px dashed rgba(99,102,241,.25);border-radius:10px;padding:2.5rem;text-align:center;cursor:pointer;position:relative;transition:all .2s;}
+.drop:hover,.drop.over{border-color:var(--c);background:var(--cp);}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-ico{font-size:2.5rem;margin-bottom:.5rem;}
+.drop-title{font-size:.9rem;font-weight:600;color:var(--s200);margin-bottom:.25rem;}
+.drop-sub{font-size:.75rem;color:var(--s500);}
+
+/* TABLE CATALOGUE */
+.cat-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.75rem;}
+.cat-table th{text-align:left;padding:6px 10px;background:var(--s800);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--s500);border-bottom:1px solid var(--border);}
+.cat-table td{padding:6px 10px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:middle;}
+.cat-table tr:hover td{background:var(--cp);}
+.cat-table input{background:var(--s800);border:1px solid var(--s700);border-radius:5px;padding:3px 7px;font-family:var(--fd);font-size:.78rem;color:var(--s100);width:100%;}
+.cat-table input:focus{outline:none;border-color:var(--c);}
+
+/* PROFILS */
+.profil-row{display:grid;grid-template-columns:1fr 120px 32px;gap:.5rem;align-items:center;margin-bottom:.4rem;}
+.profil-row input{background:var(--s800);border:1px solid var(--s700);border-radius:6px;padding:7px 10px;font-family:var(--fd);font-size:.82rem;color:var(--s100);width:100%;}
+.profil-row input:focus{outline:none;border-color:var(--c);}
+
+/* BOUTONS */
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1.1rem;border-radius:7px;border:none;cursor:pointer;font-family:var(--fd);font-size:.8rem;font-weight:600;transition:all .15s;}
+.btn-p{background:var(--c);color:#fff;}.btn-p:hover{background:var(--cf);}
+.btn-o{background:transparent;border:1px solid var(--border);color:var(--s400);}.btn-o:hover{border-color:var(--cl);color:var(--c);}
+.btn-d{background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:.9rem;padding:.2rem;}
+.btn-sm{padding:.3rem .7rem;font-size:.73rem;}
+.btn-lg{padding:.75rem 1.5rem;font-size:.88rem;}
+
+/* STATUS */
+.status{border-radius:8px;padding:.65rem 1rem;font-size:.8rem;margin-bottom:.75rem;}
+.status-ok{background:#f0fdf4;border:1px solid #86efac;color:#15803d;}
+.status-err{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;}
+.status-info{background:var(--cp);border:1px solid rgba(99,102,241,.2);color:var(--cf);}
+.status-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e;}
+
+/* CODE BLOCK */
+.code{background:#0f172a;color:#86efac;border-radius:8px;padding:1rem 1.25rem;font-family:monospace;font-size:.78rem;line-height:1.7;white-space:pre-wrap;word-break:break-all;margin:.75rem 0;}
+
+/* ACTIONS BAR */
+.actions{display:flex;gap:.6rem;margin-top:1.5rem;}
+
+/* DEPLOY */
+.deploy-step{display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.25rem;}
+.deploy-num{width:28px;height:28px;border-radius:50%;background:var(--c);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.deploy-content h4{font-size:.88rem;font-weight:700;color:var(--s100);margin-bottom:.25rem;}
+.deploy-content p{font-size:.78rem;color:var(--s500);line-height:1.6;}
+
+/* TOAST */
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#fff;border:1px solid rgba(99,102,241,.2);color:var(--c);padding:10px 18px;border-radius:8px;font-size:.82rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.1);transform:translateY(120%);transition:transform .3s;z-index:999;}
+#toast.on{transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<header class="top">
+  <div class="top-ico">⚙️</div>
+  <div>
+    <div class="top-name">Kit CRM White-Label</div>
+    <div class="top-sub">Assistant de configuration et déploiement</div>
+  </div>
+  <span class="badge">Setup v1.0</span>
+</header>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="step-item active" id="nav-1" onclick="goStep(1)">
+    <div class="step-num">1</div>
+    <div class="step-label">Société & Apparence</div>
+  </div>
+  <div class="step-item" id="nav-2" onclick="goStep(2)">
+    <div class="step-num">2</div>
+    <div class="step-label">Supabase</div>
+  </div>
+  <div class="step-item" id="nav-3" onclick="goStep(3)">
+    <div class="step-num">3</div>
+    <div class="step-label">Catalogue produits</div>
+  </div>
+  <div class="step-item" id="nav-4" onclick="goStep(4)">
+    <div class="step-num">4</div>
+    <div class="step-label">Profils & Conditions</div>
+  </div>
+  <div class="step-item" id="nav-5" onclick="goStep(5)">
+    <div class="step-num">5</div>
+    <div class="step-label">Déploiement</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ÉTAPE 1 — Société & Apparence -->
+<div class="section active" id="s1">
+  <div class="section-title">Société & Apparence</div>
+  <div class="section-sub">Informations de l'entreprise et identité visuelle du CRM</div>
+
+  <div class="card">
+    <h3>📋 Informations société</h3>
+    <div class="fg">
+      <div class="fgrp"><label class="flabel">Nom de la société *</label><input class="finput" id="s-nom" placeholder="Ex: BIO N TRUFFE" oninput="updatePreview()"></div>
+      <div class="fgrp"><label class="flabel">Slogan</label><input class="finput" id="s-slogan" placeholder="Ex: L'épicerie fine à la truffe"></div>
+      <div class="fgrp"><label class="flabel">Email commandes *</label><input class="finput" id="s-email" placeholder="commandes@societe.fr"></div>
+      <div class="fgrp"><label class="flabel">Téléphone commercial</label><input class="finput" id="s-tel" placeholder="06 XX XX XX XX"></div>
+      <div class="fgrp"><label class="flabel">Nom du commercial</label><input class="finput" id="s-contact" placeholder="Prénom NOM"></div>
+      <div class="fgrp"><label class="flabel">SIRET</label><input class="finput" id="s-siret" placeholder="XXX XXX XXX XXXXX"></div>
+    </div>
+    <div class="fg full">
+      <div class="fgrp"><label class="flabel">Adresse</label><input class="finput" id="s-adresse" placeholder="Rue, CP, Ville"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🎨 Identité visuelle</h3>
+    <div class="fg three">
+      <div class="fgrp">
+        <label class="flabel">Couleur principale</label>
+        <div class="color-row">
+          <div class="color-swatch" id="sw1" onclick="document.getElementById('cp1').click()"></div>
+          <input type="color" id="cp1" value="#22c55e" oninput="updateColor('cp1','sw1','--c-main');updatePreview()">
+          <input class="finput" id="t-cp1" value="#22c55e" oninput="syncColor('t-cp1','cp1','sw1');updatePreview()">
+        </div>
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Couleur foncée</label>
+        <div class="color-row">
+          <div class="color-swatch" id="sw2" onclick="document.getElementById('cp2').click()"></div>
+          <input type="color" id="cp2" value="#15803d" oninput="updateColor('cp2','sw2');updatePreview()">
+          <input class="finput" id="t-cp2" value="#15803d" oninput="syncColor('t-cp2','cp2','sw2');updatePreview()">
+        </div>
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Couleur fond</label>
+        <div class="color-row">
+          <div class="color-swatch" id="sw3" onclick="document.getElementById('cp3').click()"></div>
+          <input type="color" id="cp3" value="#f7fdf9" oninput="updateColor('cp3','sw3');updatePreview()">
+          <input class="finput" id="t-cp3" value="#f7fdf9" oninput="syncColor('t-cp3','cp3','sw3');updatePreview()">
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="fgrp">
+        <label class="flabel">Logo (URL image)</label>
+        <input class="finput" id="s-logo" placeholder="https://... ou laisser vide" oninput="updatePreview()">
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Emoji logo (si pas d'image)</label>
+        <input class="finput" id="s-emoji" placeholder="🌿" maxlength="2" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <label class="flabel" style="display:block;margin-bottom:.5rem">Aperçu topbar</label>
+    <div class="preview-bar" id="preview-bar" style="background:#fff;border:1px solid var(--border)">
+      <div class="preview-ico" id="preview-ico" style="background:linear-gradient(135deg,#22c55e,#4ade80)">🌿</div>
+      <div>
+        <div class="preview-name" id="preview-name">BIO N TRUFFE</div>
+        <div style="font-size:.65rem;color:var(--s500)" id="preview-slogan">Bon de commande</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-p btn-lg" onclick="goStep(2)">Suivant — Supabase →</button>
+  </div>
+</div>
+
+<!-- ÉTAPE 2 — Supabase -->
+<div class="section" id="s2">
+  <div class="section-title">Connexion Supabase</div>
+  <div class="section-sub">Chaque client a son propre projet Supabase — isolation totale des données.</div>
+
+  <div class="card">
+    <h3>🔑 Identifiants Supabase</h3>
+    <div class="status status-info">
+      <strong>Nouveau client ?</strong> Créez un projet sur <a href="https://supabase.com" target="_blank" style="color:var(--c)">supabase.com</a> → Settings → API → copiez l'URL et la clé anon.
+    </div>
+    <div class="fg full">
+      <div class="fgrp"><label class="flabel">Project URL *</label><input class="finput" id="sb-url" placeholder="https://xxxxxxxx.supabase.co" oninput="resetSbTest()"></div>
+    </div>
+    <div class="fg full">
+      <div class="fgrp"><label class="flabel">Clé anon public *</label><input class="finput" id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." oninput="resetSbTest()"></div>
+    </div>
+    <div id="sb-status"></div>
+    <div class="actions" style="margin-top:.75rem">
+      <button class="btn btn-p" onclick="testerSupabase()">🔌 Tester la connexion</button>
+      <button class="btn btn-o" onclick="creerTables()" id="btn-create" style="display:none">🗄️ Créer les tables</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🗄️ SQL à exécuter dans Supabase</h3>
+    <p style="font-size:.78rem;color:var(--s500);margin-bottom:.75rem">Si les tables n'existent pas encore, copiez ce SQL dans <strong>Supabase → SQL Editor → New Query → Run</strong></p>
+    <button class="btn btn-o btn-sm" onclick="copierSQL()">📋 Copier le SQL</button>
+    <div class="code" id="sql-block"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-o" onclick="goStep(1)">← Retour</button>
+    <button class="btn btn-p btn-lg" onclick="goStep(3)">Suivant — Catalogue →</button>
+  </div>
+</div>
+
+<!-- ÉTAPE 3 — Catalogue -->
+<div class="section" id="s3">
+  <div class="section-title">Catalogue produits</div>
+  <div class="section-sub">Importez votre tarif en Excel. Les colonnes sont détectées automatiquement.</div>
+
+  <div class="card">
+    <h3>📊 Import Excel</h3>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.78rem;color:#92400e">
+      <strong>Colonnes reconnues :</strong> Désignation/Nom, Poids/Format, EAN/Code-barres, PCB/Conditionnement, Prix HT, TVA, Catégorie, Description
+    </div>
+    <div class="drop" id="drop-excel">
+      <input type="file" accept=".xlsx,.xls,.csv" onchange="importerExcel(this)">
+      <div class="drop-ico">📊</div>
+      <div class="drop-title">Glissez votre fichier tarif Excel ici</div>
+      <div class="drop-sub">.xlsx · .xls · .csv acceptés</div>
+    </div>
+    <div id="excel-status" style="margin-top:.75rem"></div>
+  </div>
+
+  <div class="card" id="card-mapping" style="display:none">
+    <h3>🔗 Mapping des colonnes</h3>
+    <div id="mapping-content"></div>
+    <div class="actions" style="margin-top:.75rem">
+      <button class="btn btn-p" onclick="appliquerMapping()">✅ Appliquer et prévisualiser</button>
+    </div>
+  </div>
+
+  <div class="card" id="card-catalogue" style="display:none">
+    <h3 style="display:flex;justify-content:space-between;align-items:center">
+      <span>📋 Catalogue (<span id="cat-count">0</span> produits)</span>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-o btn-sm" onclick="ajouterProduit()">+ Ajouter</button>
+        <button class="btn btn-p btn-sm" onclick="sauvegarderCatalogue()">💾 Sauvegarder dans Supabase</button>
+      </div>
+    </h3>
+    <div style="overflow-x:auto">
+      <table class="cat-table">
+        <thead><tr>
+          <th>Catégorie</th><th>Désignation</th><th>Poids</th>
+          <th>EAN</th><th>PCB</th><th>Prix HT</th><th>TVA%</th><th></th>
+        </tr></thead>
+        <tbody id="cat-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-o" onclick="goStep(2)">← Retour</button>
+    <button class="btn btn-p btn-lg" onclick="goStep(4)">Suivant — Conditions →</button>
+  </div>
+</div>
+
+<!-- ÉTAPE 4 — Profils & Conditions -->
+<div class="section" id="s4">
+  <div class="section-title">Profils & Conditions</div>
+  <div class="section-sub">Définissez les profils revendeurs et les conditions commerciales.</div>
+
+  <div class="card">
+    <h3>👥 Profils revendeurs</h3>
+    <div id="profils-list"></div>
+    <button class="btn btn-o btn-sm" onclick="ajouterProfil()" style="margin-top:.5rem">+ Ajouter un profil</button>
+  </div>
+
+  <div class="card">
+    <h3>📜 Conditions commerciales</h3>
+    <div class="fg three">
+      <div class="fgrp"><label class="flabel">TVA %</label><input class="finput" id="c-tva" type="number" value="5.5" step="0.1"></div>
+      <div class="fgrp"><label class="flabel">Franco (EUR HT)</label><input class="finput" id="c-franco-ht" type="number" value="450"></div>
+      <div class="fgrp"><label class="flabel">Franco (colis)</label><input class="finput" id="c-franco-col" type="number" value="5"></div>
+    </div>
+    <div class="fg">
+      <div class="fgrp"><label class="flabel">Version tarif</label><input class="finput" id="c-version" placeholder="V15 — 01/03/2026"></div>
+      <div class="fgrp"><label class="flabel">Mot de passe CRM</label><input class="finput" id="c-pwd" type="password" placeholder="motdepasse2026"></div>
+    </div>
+    <div class="fg">
+      <div class="fgrp"><label class="flabel">Préfixe N° clients</label><input class="finput" id="c-prefix" placeholder="BNT" maxlength="6"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-o" onclick="goStep(3)">← Retour</button>
+    <button class="btn btn-p btn-lg" onclick="goStep(5)">Suivant — Déploiement →</button>
+  </div>
+</div>
+
+<!-- ÉTAPE 5 — Déploiement -->
+<div class="section" id="s5">
+  <div class="section-title">Déploiement</div>
+  <div class="section-sub">Générez votre fichier config.js et téléchargez le kit complet.</div>
+
+  <div class="card">
+    <h3>✅ Récapitulatif</h3>
+    <div id="recap-deploy"></div>
+  </div>
+
+  <div class="card">
+    <h3>📁 config.js généré</h3>
+    <button class="btn btn-o btn-sm" onclick="copierConfig()">📋 Copier</button>
+    <button class="btn btn-p btn-sm" onclick="telechargerConfig()">⬇️ Télécharger config.js</button>
+    <div class="code" id="config-output"></div>
+  </div>
+
+  <div class="card">
+    <h3>🚀 Instructions de déploiement</h3>
+    <div class="deploy-step">
+      <div class="deploy-num">1</div>
+      <div class="deploy-content">
+        <h4>Téléchargez le fichier config.js</h4>
+        <p>Cliquez "Télécharger config.js" ci-dessus. Ce fichier contient toute la configuration de votre CRM.</p>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="deploy-num">2</div>
+      <div class="deploy-content">
+        <h4>Déposez les fichiers sur votre serveur</h4>
+        <p>Placez dans le même dossier : <code>config.js</code> · <code>commande.html</code> · <code>crm.html</code> · <code>prospect.html</code></p>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="deploy-num">3</div>
+      <div class="deploy-content">
+        <h4>Exécutez le SQL dans Supabase</h4>
+        <p>Si ce n'est pas encore fait, allez dans Supabase → SQL Editor et exécutez le SQL de l'étape 2.</p>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="deploy-num">4</div>
+      <div class="deploy-content">
+        <h4>Ouvrez crm.html</h4>
+        <p>Votre CRM est opérationnel. Le bon de commande et le CRM sont synchronisés avec Supabase.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-o" onclick="goStep(4)">← Retour</button>
+    <button class="btn btn-p btn-lg" onclick="telechargerConfig()">⬇️ Télécharger config.js</button>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ═══════════════════════════
+   ÉTAT GLOBAL
+═══════════════════════════ */
+var excelRows    = [];
+var excelHeaders = [];
+var catalogue    = [];
+var profils      = [
+  {nom:'Tarif Général', remise:0},
+  {nom:'Revendeur Premium', remise:10}
+];
+
+/* ═══════════════════════════
+   NAVIGATION
+═══════════════════════════ */
+var currentStep = 1;
+function goStep(n) {
+  document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('.step-item').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('s'+n).classList.add('active');
+  document.getElementById('nav-'+n).classList.add('active');
+  currentStep = n;
+  if (n === 5) genererConfig();
+}
+
+/* ═══════════════════════════
+   APERÇU
+═══════════════════════════ */
+function updatePreview() {
+  var nom    = v('s-nom') || 'Nom société';
+  var slogan = v('s-slogan') || 'Bon de commande';
+  var logo   = v('s-logo');
+  var emoji  = v('s-emoji') || '🏪';
+  var c1     = v('t-cp1') || '#6366f1';
+  document.getElementById('preview-name').textContent   = nom;
+  document.getElementById('preview-slogan').textContent = slogan;
+  if (logo) {
+    document.getElementById('preview-ico').innerHTML = '<img src="'+logo+'" style="width:100%;height:100%;object-fit:contain;border-radius:9px;">';
+  } else {
+    document.getElementById('preview-ico').textContent = emoji;
+    document.getElementById('preview-ico').style.background = 'linear-gradient(135deg,'+c1+','+lighten(c1)+')';
+  }
+}
+
+function updateColor(cpId, swId) {
+  var v2 = document.getElementById(cpId).value;
+  document.getElementById(swId).style.background = v2;
+  document.getElementById('t-'+cpId).value = v2;
+}
+function syncColor(tId, cpId, swId) {
+  var val = document.getElementById(tId).value;
+  if (/^#[0-9a-f]{6}$/i.test(val)) {
+    document.getElementById(cpId).value = val;
+    document.getElementById(swId).style.background = val;
+  }
+}
+function lighten(hex) {
+  var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return 'rgb('+(r+60)+','+(g+60)+','+(b+60)+')';
+}
+
+/* Init swatches */
+['sw1','sw2','sw3'].forEach(function(id,i){
+  var vals=['#22c55e','#15803d','#f7fdf9'];
+  document.getElementById(id).style.background=vals[i];
+});
+
+/* ═══════════════════════════
+   SUPABASE
+═══════════════════════════ */
+var SQL_TABLES = `create table if not exists commandes (
+  id text primary key, ref text, date text,
+  societe text, ville text, cp text, email text,
+  contact text, telephone text, profil text,
+  total_ht numeric, total_colis integer, total_uvc integer,
+  tva numeric, total_ttc numeric, franco text,
+  lignes jsonb, commentaire text,
+  client_id text, num_client text,
+  created_at timestamptz default now()
+);
+create table if not exists prospects (
+  id text primary key, raison_sociale text,
+  rue text, complement text, cp text, ville text,
+  tel_magasin text, email_magasin text, surface text,
+  siret text, tva_intra text, capital text, naf text,
+  contact1 text, tel1 text, portable1 text, email1 text,
+  contact2 text, tel2 text, fonction text,
+  contact_factu text, email_factu text,
+  jours_livraison jsonb, heure_debut text, heure_fin text,
+  info_livraison text, potentiel text, profil text,
+  commentaire text, created_at timestamptz default now()
+);
+create table if not exists clients (
+  id text primary key, num_client text,
+  raison_sociale text, rue text, complement text,
+  cp text, ville text, tel_magasin text, email_magasin text,
+  surface text, siret text, tva_intra text, capital text,
+  naf text, contact1 text, tel1 text, portable1 text,
+  email1 text, contact2 text, tel2 text, fonction text,
+  contact_factu text, email_factu text, jours_livraison jsonb,
+  heure_debut text, heure_fin text, info_livraison text,
+  potentiel text, profil text, conditions_paiement text,
+  notes_internes text, converted_at text,
+  created_at timestamptz default now()
+);
+create table if not exists catalogue (
+  id text primary key, categorie text, nom text,
+  poids text, ean text, pcb integer,
+  prix_ht numeric, tva numeric, description text,
+  actif boolean default true,
+  created_at timestamptz default now()
+);
+alter table commandes enable row level security;
+alter table prospects enable row level security;
+alter table clients enable row level security;
+alter table catalogue enable row level security;
+drop policy if exists "public_all" on commandes;
+drop policy if exists "public_all" on prospects;
+drop policy if exists "public_all" on clients;
+drop policy if exists "public_all" on catalogue;
+create policy "public_all" on commandes for all using (true) with check (true);
+create policy "public_all" on prospects for all using (true) with check (true);
+create policy "public_all" on clients for all using (true) with check (true);
+create policy "public_all" on catalogue for all using (true) with check (true);`;
+
+document.getElementById('sql-block').textContent = SQL_TABLES;
+
+function sbUrl() { return v('sb-url').trim(); }
+function sbKey() { return v('sb-key').trim(); }
+function sbH()   { return {'Content-Type':'application/json','apikey':sbKey(),'Authorization':'Bearer '+sbKey(),'Prefer':'resolution=merge-duplicates,return=representation'}; }
+
+function resetSbTest() { document.getElementById('sb-status').innerHTML=''; document.getElementById('btn-create').style.display='none'; }
+
+function testerSupabase() {
+  if (!sbUrl()||!sbKey()) { showStatus('sb-status','err','Remplissez l\'URL et la clé Supabase.'); return; }
+  showStatus('sb-status','info','Test en cours...');
+  fetch(sbUrl()+'/rest/v1/commandes?select=count&limit=1',{headers:{'apikey':sbKey(),'Authorization':'Bearer '+sbKey()}})
+  .then(function(r){
+    if (r.status===200||r.status===206) {
+      showStatus('sb-status','ok','✅ Connexion réussie ! Tables trouvées.');
+    } else if (r.status===404||r.status===400) {
+      showStatus('sb-status','warn','⚠️ Connexion OK mais tables introuvables. Exécutez le SQL ci-dessous.');
+      document.getElementById('btn-create').style.display='inline-flex';
+    } else {
+      showStatus('sb-status','err','❌ Erreur HTTP '+r.status+' — vérifiez l\'URL et la clé.');
+    }
+  }).catch(function(){showStatus('sb-status','err','❌ Impossible de joindre Supabase. Vérifiez l\'URL.');});
+}
+
+function creerTables() {
+  showStatus('sb-status','info','Exécutez le SQL dans Supabase → SQL Editor pour créer les tables.');
+}
+
+function copierSQL() {
+  navigator.clipboard.writeText(SQL_TABLES).then(function(){toast('SQL copié !');});
+}
+
+/* ═══════════════════════════
+   CATALOGUE — IMPORT EXCEL
+═══════════════════════════ */
+var DETECT_COLS = {
+  nom:         ['nom','designation','désignation','libelle','libellé','produit','article','description','name'],
+  poids:       ['poids','format','contenance','conditionnement','volume','taille','size'],
+  ean:         ['ean','ean13','code barre','code-barre','barcode','gtin','upc'],
+  pcb:         ['pcb','colis','carton','colisage','pack','quantite carton','nb/carton'],
+  prix_ht:     ['prix','prix ht','pu ht','tarif','price','montant','ht'],
+  tva:         ['tva','vat','taxe','tax'],
+  categorie:   ['categorie','catégorie','famille','gamme','type','category','rayon'],
+  description: ['detail','détail','info','remarque','commentaire','note']
+};
+
+function autoCol(header) {
+  var h = header.toLowerCase().trim();
+  var fields = Object.keys(DETECT_COLS);
+  for (var i=0;i<fields.length;i++) {
+    var kws = DETECT_COLS[fields[i]];
+    for (var j=0;j<kws.length;j++) { if (h.includes(kws[j])) return fields[i]; }
+  }
+  return '';
+}
+
+function importerExcel(input) {
+  var file = input.files[0]; if (!file) return;
+  showStatus('excel-status','info','Lecture du fichier...');
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result,{type:'binary'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+      if (!rows.length) { showStatus('excel-status','err','Fichier vide ou non reconnu.'); return; }
+      excelRows = rows;
+      excelHeaders = Object.keys(rows[0]);
+      showStatus('excel-status','ok','✅ '+rows.length+' lignes détectées, '+excelHeaders.length+' colonnes.');
+      afficherMapping();
+    } catch(err) { showStatus('excel-status','err','❌ Erreur : '+err.message); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function afficherMapping() {
+  var CRM_FIELDS = [
+    {v:'',l:'— Ignorer —'},{v:'nom',l:'Désignation *'},{v:'poids',l:'Poids / Format'},
+    {v:'ean',l:'Code EAN'},{v:'pcb',l:'PCB (unités/colis)'},{v:'prix_ht',l:'Prix HT unitaire'},
+    {v:'tva',l:'TVA %'},{v:'categorie',l:'Catégorie'},{v:'description',l:'Description'}
+  ];
+  var preview = excelRows[0];
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.8rem">'
+    + '<thead><tr><th style="text-align:left;padding:6px 10px;background:var(--s800);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--s500);border-bottom:1px solid var(--border)">Colonne Excel</th>'
+    + '<th style="text-align:left;padding:6px 10px;background:var(--s800);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--s500);border-bottom:1px solid var(--border)">Aperçu</th>'
+    + '<th style="text-align:left;padding:6px 10px;background:var(--s800);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--s500);border-bottom:1px solid var(--border)">Champ CRM</th>'
+    + '</tr></thead><tbody>';
+  excelHeaders.forEach(function(col,i) {
+    var sample = String(preview[col]||'').slice(0,30);
+    var auto   = autoCol(col);
+    var opts   = CRM_FIELDS.map(function(f){ return '<option value="'+f.v+'"'+(f.v===auto?' selected':'')+'>'+f.l+'</option>'; }).join('');
+    html += '<tr><td style="padding:5px 10px;font-weight:600;color:var(--s100)">'
+      +col+'</td><td style="padding:5px 10px;color:var(--s500);font-size:.75rem;font-style:italic">'
+      +sample+'</td><td style="padding:5px 10px"><select class="finput" id="map-'+i+'" style="font-size:.75rem;padding:4px 8px">'+opts+'</select></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('mapping-content').innerHTML = html;
+  document.getElementById('card-mapping').style.display = '';
+}
+
+function appliquerMapping() {
+  var mapping = {};
+  excelHeaders.forEach(function(col,i) {
+    var sel = document.getElementById('map-'+i);
+    if (sel&&sel.value) mapping[col] = sel.value;
+  });
+  catalogue = [];
+  excelRows.forEach(function(row) {
+    var obj = {};
+    Object.keys(mapping).forEach(function(col){ obj[mapping[col]] = String(row[col]||'').trim(); });
+    if (!obj.nom) return;
+    catalogue.push({
+      id:          'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      categorie:   obj.categorie  || 'Divers',
+      nom:         obj.nom        || '',
+      poids:       obj.poids      || '',
+      ean:         obj.ean        || '',
+      pcb:         parseInt(obj.pcb)||1,
+      prix_ht:     parseFloat(obj.prix_ht)||0,
+      tva:         parseFloat(obj.tva)||5.5,
+      description: obj.description||''
+    });
+  });
+  renderCatalogue();
+  document.getElementById('card-catalogue').style.display='';
+  document.getElementById('cat-count').textContent = catalogue.length;
+  toast('✅ '+catalogue.length+' produits mappés');
+}
+
+function renderCatalogue() {
+  var html = catalogue.map(function(p,i) {
+    return '<tr>'
+      +'<td><input value="'+esc(p.categorie)+'" oninput="catalogue['+i+'].categorie=this.value"></td>'
+      +'<td><input value="'+esc(p.nom)+'" oninput="catalogue['+i+'].nom=this.value" style="min-width:180px"></td>'
+      +'<td><input value="'+esc(p.poids)+'" oninput="catalogue['+i+'].poids=this.value" style="width:70px"></td>'
+      +'<td><input value="'+esc(p.ean)+'" oninput="catalogue['+i+'].ean=this.value" style="width:120px"></td>'
+      +'<td><input type="number" value="'+p.pcb+'" oninput="catalogue['+i+'].pcb=parseInt(this.value)||1" style="width:55px"></td>'
+      +'<td><input type="number" step="0.01" value="'+p.prix_ht+'" oninput="catalogue['+i+'].prix_ht=parseFloat(this.value)||0" style="width:75px"></td>'
+      +'<td><input type="number" step="0.1" value="'+p.tva+'" oninput="catalogue['+i+'].tva=parseFloat(this.value)||5.5" style="width:55px"></td>'
+      +'<td><button class="btn-d" onclick="supprimerProduit('+i+')">🗑</button></td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('cat-body').innerHTML = html || '<tr><td colspan="8" style="text-align:center;color:var(--s500);padding:1rem;font-style:italic">Aucun produit</td></tr>';
+}
+
+function ajouterProduit() {
+  catalogue.push({id:'p_'+Date.now(),categorie:'Nouveau',nom:'Nouveau produit',poids:'',ean:'',pcb:1,prix_ht:0,tva:5.5,description:''});
+  renderCatalogue();
+  document.getElementById('cat-count').textContent=catalogue.length;
+}
+
+function supprimerProduit(i) {
+  catalogue.splice(i,1);
+  renderCatalogue();
+  document.getElementById('cat-count').textContent=catalogue.length;
+}
+
+function sauvegarderCatalogue() {
+  if (!sbUrl()||!sbKey()) { toast('⚠️ Configurez Supabase d\'abord (étape 2)'); return; }
+  if (!catalogue.length)  { toast('⚠️ Catalogue vide'); return; }
+  toast('Envoi catalogue...');
+  var rows = catalogue.map(function(p) {
+    return { id:p.id, categorie:p.categorie, nom:p.nom, poids:p.poids,
+             ean:p.ean, pcb:p.pcb||1, prix_ht:p.prix_ht||0,
+             tva:p.tva||5.5, description:p.description, actif:true };
+  });
+  fetch(sbUrl()+'/rest/v1/catalogue',{method:'POST',headers:sbH(),body:JSON.stringify(rows)})
+  .then(function(r){
+    if (r.ok) toast('✅ '+rows.length+' produits sauvegardés dans Supabase !');
+    else      r.json().then(function(d){toast('❌ Erreur : '+(d.message||r.status));});
+  }).catch(function(){toast('❌ Erreur réseau');});
+}
+
+/* ═══════════════════════════
+   PROFILS
+═══════════════════════════ */
+function renderProfils() {
+  document.getElementById('profils-list').innerHTML = profils.map(function(p,i) {
+    return '<div class="profil-row">'
+      +'<input value="'+esc(p.nom)+'" placeholder="Nom du profil" oninput="profils['+i+'].nom=this.value">'
+      +'<input type="number" value="'+p.remise+'" min="0" max="100" placeholder="Remise %" oninput="profils['+i+'].remise=parseInt(this.value)||0" style="text-align:center">'
+      +'<button class="btn-d" onclick="profils.splice('+i+',1);renderProfils()">🗑</button>'
+      +'</div>';
+  }).join('');
+}
+function ajouterProfil() { profils.push({nom:'Nouveau profil',remise:0}); renderProfils(); }
+renderProfils();
+
+/* ═══════════════════════════
+   GÉNÉRATION CONFIG.JS
+═══════════════════════════ */
+function genererConfig() {
+  var emailParts = v('s-email').split('@');
+  var emailJS    = emailParts.length===2
+    ? "['"+emailParts[0]+"','"+emailParts[1]+"'].join('@')"
+    : "'"+v('s-email')+"'";
+
+  var configObj = {
+    societe: {
+      nom:       v('s-nom')     ||'Société',
+      slogan:    v('s-slogan')  ||'',
+      telephone: v('s-tel')     ||'',
+      contact:   v('s-contact') ||'',
+      adresse:   v('s-adresse') ||'',
+      siret:     v('s-siret')   ||''
+    },
+    theme: {
+      couleur_principale: v('t-cp1')||'#22c55e',
+      couleur_foncee:     v('t-cp2')||'#15803d',
+      couleur_fond:       v('t-cp3')||'#f7fdf9',
+      logo_url:           v('s-logo') ||'',
+      logo_emoji:         v('s-emoji')||'🏪',
+      logo_texte:         v('s-nom')  ||'Société'
+    },
+    supabase: {
+      url: sbUrl(),
+      key: sbKey()
+    },
+    conditions: {
+      tva_taux:           parseFloat(v('c-tva'))||5.5,
+      franco_port_ht:     parseFloat(v('c-franco-ht'))||450,
+      franco_port_colis:  parseInt(v('c-franco-col'))||5,
+      tarif_version:      v('c-version')||'V1'
+    },
+    profils: profils,
+    crm: {
+      mot_de_passe: v('c-pwd')||'crm2026',
+      prefix_client: v('c-prefix')||'CLI'
+    }
+  };
+
+  var js = '/* ============================================================\n'
+    + '   KIT CRM WHITE-LABEL — CONFIGURATION\n'
+    + '   Généré par setup.html le '+new Date().toLocaleDateString('fr-FR')+'\n'
+    + '   ============================================================ */\n\n'
+    + 'var KIT_CONFIG = '+JSON.stringify(configObj,null,2)+';\n\n'
+    + '/* Email destinataire (construit en JS pour éviter les filtres anti-spam) */\n'
+    + 'KIT_CONFIG.societe.email_fn = function() { return '+emailJS+'; };\n';
+
+  document.getElementById('config-output').textContent = js;
+
+  /* Récap */
+  var ok = function(t){return '<span style="color:#15803d">✅ '+t+'</span>';};
+  var ko = function(t){return '<span style="color:#dc2626">❌ '+t+'</span>';};
+  document.getElementById('recap-deploy').innerHTML = [
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.82rem">',
+    '<div>'+( v('s-nom')  ? ok('Société : '+v('s-nom'))  : ko('Nom société manquant')     )+'</div>',
+    '<div>'+( v('s-email')? ok('Email : '+v('s-email'))  : ko('Email commandes manquant') )+'</div>',
+    '<div>'+( sbUrl()     ? ok('Supabase configuré')     : ko('Supabase non configuré')   )+'</div>',
+    '<div>'+( catalogue.length ? ok(catalogue.length+' produits') : ko('Catalogue vide')  )+'</div>',
+    '<div>'+( profils.length   ? ok(profils.length+' profils')    : ko('Pas de profil')   )+'</div>',
+    '<div>'+( v('c-pwd')       ? ok('Mot de passe CRM défini')    : ko('Mot de passe manquant') )+'</div>',
+    '</div>'
+  ].join('');
+}
+
+function copierConfig() {
+  var txt = document.getElementById('config-output').textContent;
+  navigator.clipboard.writeText(txt).then(function(){toast('Config copiée !');});
+}
+
+function telechargerConfig() {
+  var txt  = document.getElementById('config-output').textContent;
+  var nom  = (v('s-nom')||'config').toLowerCase().replace(/\s+/g,'-');
+  var blob = new Blob([txt],{type:'text/javascript'});
+  var a    = document.createElement('a');
+  a.href   = URL.createObjectURL(blob);
+  a.download = 'config-'+nom+'.js';
+  a.click();
+  toast('config.js téléchargé !');
+}
+
+/* ═══════════════════════════
+   UTILS
+═══════════════════════════ */
+function v(id) { var el=document.getElementById(id); return el?el.value.trim():''; }
+function esc(s){ return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function showStatus(id, type, msg) {
+  var map = {ok:'status-ok',err:'status-err',info:'status-info',warn:'status-warn'};
+  document.getElementById(id).innerHTML='<div class="status '+map[type]+'">'+msg+'</div>';
+}
+
+function toast(msg) {
+  var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  setTimeout(function(){t.classList.remove('on');},3000);
+}
+</script>
+</body>
+</html>
