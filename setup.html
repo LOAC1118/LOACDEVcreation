@@ -275,10 +275,10 @@ input[type=color]{opacity:0;position:absolute;pointer-events:none;}
 <!-- ÉTAPE 3 — Catalogue -->
 <div class="section" id="s3">
   <div class="section-title">Catalogue produits</div>
-  <div class="section-sub">Importez votre tarif en Excel. Les colonnes sont détectées automatiquement.</div>
+  <div class="section-sub">Importez votre tarif depuis un fichier Excel ou un PDF. Les produits sont détectés automatiquement.</div>
 
   <div class="card">
-    <h3>📊 Import Excel</h3>
+    <h3>📊 Import Excel <span style="font-weight:400;color:var(--s500);font-size:.78rem">.xlsx · .xls · .csv</span></h3>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.78rem;color:#92400e">
       <strong>Colonnes reconnues :</strong> Désignation/Nom, Poids/Format, EAN/Code-barres, PCB/Conditionnement, Prix HT, TVA, Catégorie, Description
     </div>
@@ -289,6 +289,21 @@ input[type=color]{opacity:0;position:absolute;pointer-events:none;}
       <div class="drop-sub">.xlsx · .xls · .csv acceptés</div>
     </div>
     <div id="excel-status" style="margin-top:.75rem"></div>
+  </div>
+
+  <div class="card">
+    <h3>📄 Import PDF tarif <span style="font-weight:400;color:var(--s500);font-size:.78rem">extraction automatique</span></h3>
+    <div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:7px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.78rem;color:var(--cf)">
+      <strong>Comment ça marche :</strong> Le PDF est analysé ligne par ligne. Les lignes contenant un prix, un EAN ou un PCB sont extraites et présentées pour correction avant import.
+    </div>
+    <div class="drop" id="drop-pdf">
+      <input type="file" accept=".pdf" onchange="importerPDF(this)">
+      <div class="drop-ico">📄</div>
+      <div class="drop-title">Glissez votre fichier tarif PDF ici</div>
+      <div class="drop-sub">.pdf accepté — tarif, catalogue, liste de prix</div>
+    </div>
+    <div id="pdf-status" style="margin-top:.75rem"></div>
+    <div id="pdf-preview" style="display:none;margin-top:1rem"></div>
   </div>
 
   <div class="card" id="card-mapping" style="display:none">
@@ -828,6 +843,221 @@ function toast(msg) {
   var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
   setTimeout(function(){t.classList.remove('on');},3000);
 }
+
+/* ═══════════════════════════
+   IMPORT PDF TARIF
+═══════════════════════════ */
+var pdfProduits = []; // produits extraits du PDF
+
+function importerPDF(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('pdf-status');
+  statusEl.innerHTML = '<div class="status status-info">Lecture du PDF en cours...</div>';
+  document.getElementById('pdf-preview').style.display = 'none';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    // Lire le PDF comme texte brut (extraction des caractères visibles)
+    var bytes = new Uint8Array(e.target.result);
+    var text  = extraireTxtPDF(bytes);
+    if (!text || text.length < 50) {
+      statusEl.innerHTML = '<div class="status status-warn">⚠️ Le PDF semble être une image scannée (pas de texte extractible). Utilisez un PDF natif/numérique ou convertissez-le en Excel.</div>';
+      return;
+    }
+    var produits = analyserTxtPDF(text);
+    if (!produits.length) {
+      statusEl.innerHTML = '<div class="status status-warn">⚠️ Aucun produit détecté automatiquement. Essayez l\'import Excel ou ajoutez les produits manuellement.</div>'
+        + '<details style="margin-top:.5rem"><summary style="font-size:.75rem;cursor:pointer;color:var(--s400)">Voir le texte extrait (debug)</summary><div class="code" style="max-height:200px;overflow-y:auto;font-size:.7rem">' + esc(text.slice(0, 3000)) + '</div></details>';
+      return;
+    }
+    pdfProduits = produits;
+    statusEl.innerHTML = '<div class="status status-ok">✅ ' + produits.length + ' produits détectés dans le PDF</div>';
+    afficherPreviewPDF(produits);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* Extraction texte brut depuis PDF binaire (sans dépendance externe) */
+function extraireTxtPDF(bytes) {
+  // Chercher les blocs de texte PDF (BT...ET, strings entre parenthèses et hex)
+  var str = '';
+  for (var i = 0; i < bytes.length; i++) {
+    str += String.fromCharCode(bytes[i]);
+  }
+  var texte = '';
+  // Extraire strings entre parenthèses (format PDF text)
+  var regParens = /\(([^)]{1,200})\)/g;
+  var regHex    = /<([0-9a-fA-F]{2,})>/g;
+  var inBT = false;
+  var lines = str.split('\n');
+
+  lines.forEach(function(line) {
+    if (line.indexOf('BT') !== -1) inBT = true;
+    if (line.indexOf('ET') !== -1) inBT = false;
+    // Extraire texte entre parenthèses (opérateurs Tj, TJ, ')
+    var m;
+    while ((m = regParens.exec(line)) !== null) {
+      var t = m[1]
+        .replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\\t/g, '\t')
+        .replace(/\\\(/g, '(').replace(/\\\)/g, ')').replace(/\\\\/g, '\\');
+      texte += t + ' ';
+    }
+    // Extraire hex strings
+    while ((m = regHex.exec(line)) !== null) {
+      var hex = m[1];
+      var decoded = '';
+      for (var h = 0; h < hex.length - 1; h += 2) {
+        var code = parseInt(hex.substr(h, 2), 16);
+        if (code > 31 && code < 127) decoded += String.fromCharCode(code);
+      }
+      if (decoded.length > 1) texte += decoded + ' ';
+    }
+    // Ajouter saut de ligne après chaque Td/TD/T*
+    if (/\bT[dD*]\b/.test(line)) texte += '\n';
+  });
+
+  // Fallback : extraire tout texte lisible si extraction PDF vide
+  if (texte.trim().length < 100) {
+    texte = '';
+    var printable = '';
+    for (var i = 0; i < bytes.length; i++) {
+      var c = bytes[i];
+      if (c >= 32 && c <= 126) {
+        printable += String.fromCharCode(c);
+      } else if (c === 10 || c === 13) {
+        if (printable.trim().length > 3) texte += printable.trim() + '\n';
+        printable = '';
+      }
+    }
+  }
+  return texte;
+}
+
+/* Analyser le texte extrait pour trouver des produits */
+function analyserTxtPDF(texte) {
+  var lignes   = texte.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 2; });
+  var produits = [];
+  var catCourante = 'Divers';
+
+  // Patterns de détection
+  var rePrix = /(\d{1,3}[.,]\d{2})\s*(€|EUR|HT)?/;
+  var reEAN  = /\b(\d{13})\b/;
+  var rePCB  = /(?:PCB|colis|carton|pack)\s*[:\-]?\s*(\d{1,3})/i;
+  var rePoids= /(\d+[.,]?\d*)\s*(g|kg|ml|cl|l|kg)\b/i;
+  var reCateg = /^[A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ][A-Za-zÀ-ÿ\s&-]{3,40}$/;
+
+  for (var i = 0; i < lignes.length; i++) {
+    var l = lignes[i];
+
+    // Détecter catégorie (ligne en majuscules ou longue sans prix)
+    if (reCateg.test(l) && !rePrix.test(l) && l.length > 4 && l.length < 50) {
+      var upper = l.toUpperCase();
+      var mots  = ['PRODUIT','GAMME','CATEGORIE','FAMILLE','RAYON','SAUCE','HUILE','MIEL','TRUFFE','COFFRET','SNACK','BOISSON','CONDIMENT','EPICE'];
+      var estCateg = mots.some(function(m) { return upper.includes(m); }) || (l === l.toUpperCase() && l.length > 5);
+      if (estCateg) { catCourante = l; continue; }
+    }
+
+    var mPrix = rePrix.exec(l);
+    if (!mPrix) continue; // pas de prix = pas un produit
+
+    var prix = parseFloat(mPrix[1].replace(',', '.'));
+    if (prix < 0.5 || prix > 5000) continue; // filtre valeurs aberrantes
+
+    var mEAN   = reEAN.exec(l);
+    var mPCB   = rePCB.exec(lignes[i] + ' ' + (lignes[i+1]||''));
+    var mPoids = rePoids.exec(lignes[i] + ' ' + (lignes[i-1]||''));
+
+    // Nom = ligne sans le prix et les codes
+    var nom = l
+      .replace(rePrix, '').replace(reEAN, '').replace(rePCB, '')
+      .replace(/[€EUR]+/g, '').replace(/\s{2,}/g, ' ').trim();
+
+    // Filtrer noms trop courts ou qui ne ressemblent pas à un produit
+    if (nom.length < 4) {
+      // Essayer la ligne précédente comme nom
+      var prev = lignes[i-1] || '';
+      if (prev.length > 4 && !rePrix.test(prev)) nom = prev.trim();
+    }
+    if (nom.length < 3) continue;
+
+    produits.push({
+      id:          'pdf_' + Date.now() + '_' + i,
+      categorie:   catCourante,
+      nom:         nom.slice(0, 80),
+      poids:       mPoids ? mPoids[1] + mPoids[2] : '',
+      ean:         mEAN ? mEAN[1] : '',
+      pcb:         mPCB ? parseInt(mPCB[1]) : 1,
+      prix_ht:     prix,
+      tva:         5.5,
+      description: ''
+    });
+  }
+
+  // Dédoublonner par nom similaire
+  var vus = {};
+  return produits.filter(function(p) {
+    var cle = p.nom.slice(0, 20).toLowerCase();
+    if (vus[cle]) return false;
+    vus[cle] = true;
+    return true;
+  });
+}
+
+function afficherPreviewPDF(produits) {
+  var el = document.getElementById('pdf-preview');
+  el.style.display = '';
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">'
+    + '<strong style="font-size:.85rem;color:var(--s100)">Produits extraits — vérifiez et corrigez avant import</strong>'
+    + '<div style="display:flex;gap:.5rem">'
+    + '<button class="btn btn-o btn-sm" onclick="ajouterProduitPDF()">+ Ajouter</button>'
+    + '<button class="btn btn-p btn-sm" onclick="validerPDF()">✅ Ajouter au catalogue</button>'
+    + '</div></div>'
+    + '<div style="overflow-x:auto"><table class="cat-table"><thead><tr>'
+    + '<th>Catégorie</th><th>Désignation</th><th>Poids</th><th>EAN</th><th>PCB</th><th>Prix HT</th><th>TVA%</th><th></th>'
+    + '</tr></thead><tbody id="pdf-body"></tbody></table></div>';
+  el.innerHTML = html;
+  renderPDFBody();
+}
+
+function renderPDFBody() {
+  document.getElementById('pdf-body').innerHTML = pdfProduits.map(function(p, i) {
+    return '<tr>'
+      + '<td><input value="' + esc(p.categorie) + '" oninput="pdfProduits[' + i + '].categorie=this.value" style="min-width:100px"></td>'
+      + '<td><input value="' + esc(p.nom) + '" oninput="pdfProduits[' + i + '].nom=this.value" style="min-width:160px"></td>'
+      + '<td><input value="' + esc(p.poids) + '" oninput="pdfProduits[' + i + '].poids=this.value" style="width:65px"></td>'
+      + '<td><input value="' + esc(p.ean) + '" oninput="pdfProduits[' + i + '].ean=this.value" style="width:110px"></td>'
+      + '<td><input type="number" value="' + p.pcb + '" oninput="pdfProduits[' + i + '].pcb=parseInt(this.value)||1" style="width:50px"></td>'
+      + '<td><input type="number" step="0.01" value="' + p.prix_ht + '" oninput="pdfProduits[' + i + '].prix_ht=parseFloat(this.value)||0" style="width:70px"></td>'
+      + '<td><input type="number" step="0.1" value="' + p.tva + '" oninput="pdfProduits[' + i + '].tva=parseFloat(this.value)||5.5" style="width:50px"></td>'
+      + '<td><button class="btn-d" onclick="pdfProduits.splice(' + i + ',1);renderPDFBody()">🗑</button></td>'
+      + '</tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--s500);padding:1rem">Aucun produit</td></tr>';
+}
+
+function ajouterProduitPDF() {
+  pdfProduits.push({ id: 'pdf_' + Date.now(), categorie: 'Divers', nom: 'Nouveau produit', poids: '', ean: '', pcb: 1, prix_ht: 0, tva: 5.5, description: '' });
+  renderPDFBody();
+}
+
+function validerPDF() {
+  var valides = pdfProduits.filter(function(p) { return p.nom && p.prix_ht > 0; });
+  if (!valides.length) { toast('Aucun produit valide (nom + prix requis)'); return; }
+  // Fusionner avec catalogue existant
+  valides.forEach(function(p) {
+    if (!catalogue.find(function(c) { return c.nom === p.nom; })) {
+      catalogue.push(p);
+    }
+  });
+  renderCatalogue();
+  document.getElementById('card-catalogue').style.display = '';
+  document.getElementById('cat-count').textContent = catalogue.length;
+  document.getElementById('pdf-preview').style.display = 'none';
+  document.getElementById('pdf-status').innerHTML = '<div class="status status-ok">✅ ' + valides.length + ' produits ajoutés au catalogue</div>';
+  toast('✅ ' + valides.length + ' produits PDF ajoutés au catalogue');
+}
+
 </script>
 </body>
 </html>

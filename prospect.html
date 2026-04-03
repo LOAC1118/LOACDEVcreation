@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Nouveau Prospect</title>
+<script src="config.js"></script>
+<style>
+:root{
+  --v:#22c55e;--vf:#15803d;--vc:#4ade80;--vp:#f0fdf4;
+  --s100:#1e293b;--s200:#334155;--s400:#64748b;--s500:#94a3b8;
+  --s700:#e2e8f0;--s800:#f1f5f9;
+  --border:rgba(0,0,0,.08);
+  --fd:'DM Sans',sans-serif;--fdisp:'DM Serif Display',serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--fd);background:var(--vp);color:var(--s200);font-size:14px;min-height:100vh;}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+/* TOPBAR */
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.brand-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.brand-name{font-family:var(--fdisp);font-size:1rem;color:var(--s100);}
+.tag{background:var(--vp);border:1px solid #86efac;color:var(--vf);font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:20px;}
+
+/* STEPPER */
+.stepper{display:flex;align-items:center;gap:0;overflow-x:auto;background:#fff;border-bottom:1px solid var(--border);padding:.6rem 1.5rem;}
+.step{display:flex;align-items:center;gap:.4rem;padding:.3rem .6rem;border-radius:6px;cursor:pointer;white-space:nowrap;font-size:.78rem;color:var(--s500);transition:all .15s;}
+.step.active{background:var(--vp);color:var(--vf);font-weight:600;}
+.step.done{color:var(--vf);}
+.step-n{width:20px;height:20px;border-radius:50%;background:var(--s700);color:var(--s500);font-size:.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step.active .step-n{background:var(--v);color:#fff;}
+.step.done .step-n{background:var(--v);color:#fff;}
+.step-sep{color:var(--s700);padding:0 .25rem;font-size:.8rem;}
+
+/* CONTENU */
+.content{max-width:860px;margin:2rem auto;padding:0 1.5rem;}
+.page-section{display:none;}.page-section.active{display:block;}
+
+/* CARTES */
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem;}
+.card-title{font-family:var(--fdisp);font-size:1.05rem;color:var(--s100);margin-bottom:.25rem;}
+.card-sub{font-size:.75rem;color:var(--s500);margin-bottom:1.25rem;line-height:1.5;}
+
+/* FORM */
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;margin-bottom:.75rem;}
+.fg-full{grid-column:1/-1;}
+.fgrp{display:flex;flex-direction:column;gap:.3rem;}
+.flabel{font-size:.67rem;font-weight:600;color:var(--s400);letter-spacing:.06em;text-transform:uppercase;}
+.flabel.req::after{content:' *';color:var(--v);}
+.finput{background:var(--s800);border:1px solid var(--s700);border-radius:8px;color:var(--s100);font-family:var(--fd);font-size:.83rem;padding:9px 12px;width:100%;transition:border-color .2s;}
+.finput:focus{outline:none;border-color:var(--v);background:#fff;}
+.finput::placeholder{color:var(--s500);}
+select.finput option{background:#fff;}
+textarea.finput{resize:vertical;min-height:72px;}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--v);}
+
+/* JOURS */
+.jours{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.3rem;}
+.jour-btn{padding:.3rem .7rem;border:1.5px solid var(--s700);border-radius:20px;font-size:.72rem;font-weight:600;cursor:pointer;background:#fff;color:var(--s400);transition:all .15s;}
+.jour-btn.active{border-color:var(--v);background:var(--vp);color:var(--vf);}
+
+/* NAVIGATION */
+.nav-bar{display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);}
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.25rem;border-radius:8px;border:none;cursor:pointer;font-family:var(--fd);font-size:.82rem;font-weight:600;transition:all .15s;}
+.btn-v{background:var(--v);color:#fff;}.btn-v:hover{background:var(--vc);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--s400);}.btn-outline:hover{border-color:#94a3b8;}
+.btn-lg{padding:.75rem 1.75rem;font-size:.88rem;}
+
+/* RECAP */
+.recap-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+.recap-block{background:var(--s800);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;}
+.recap-block h3{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--vf);margin-bottom:.6rem;font-weight:600;}
+.recap-row{display:flex;gap:.5rem;margin-bottom:.25rem;font-size:.78rem;}
+.recap-label{color:var(--s500);min-width:110px;flex-shrink:0;font-size:.72rem;}
+.recap-value{color:var(--s100);font-weight:600;word-break:break-word;}
+
+/* SUCCESS */
+.success{display:none;text-align:center;padding:3rem 1.5rem;}
+.success-ico{font-size:4rem;margin-bottom:1rem;}
+.success h2{font-family:var(--fdisp);font-size:1.8rem;color:var(--s100);margin-bottom:.5rem;}
+.success p{color:var(--s500);max-width:400px;margin:0 auto;line-height:1.7;}
+.success-btns{display:flex;gap:.75rem;justify-content:center;margin-top:1.5rem;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="crm.html" class="brand">
+    <div class="brand-ico" id="brand-ico">🌿</div>
+    <div><span class="brand-name" id="brand-name">CRM</span></div>
+  </a>
+  <span class="tag">Nouveau prospect</span>
+</header>
+
+<div class="stepper" id="stepper">
+  <div class="step active" id="nav-1" onclick="goStep(1)"><div class="step-n">1</div>Magasin</div>
+  <span class="step-sep">›</span>
+  <div class="step" id="nav-2" onclick="goStep(2)"><div class="step-n">2</div>Contacts</div>
+  <span class="step-sep">›</span>
+  <div class="step" id="nav-3" onclick="goStep(3)"><div class="step-n">3</div>Livraisons</div>
+  <span class="step-sep">›</span>
+  <div class="step" id="nav-4" onclick="goStep(4)"><div class="step-n">4</div>Commercial</div>
+  <span class="step-sep">›</span>
+  <div class="step" id="nav-5" onclick="goStep(5)"><div class="step-n">5</div>Envoi</div>
+</div>
+
+<div class="content">
+
+<!-- ÉTAPE 1 — Magasin -->
+<div class="page-section active" id="s1">
+  <div class="card">
+    <div class="card-title">🏪 Informations magasin</div>
+    <div class="card-sub">Renseignez les informations du point de vente.</div>
+    <div class="fg">
+      <div class="fgrp fg-full"><label class="flabel req">Raison sociale / Enseigne</label><input class="finput" id="p-rs" placeholder="Nom du magasin"></div>
+      <div class="fgrp fg-full"><label class="flabel">Adresse</label><input class="finput" id="p-rue" placeholder="N° et nom de rue"></div>
+      <div class="fgrp"><label class="flabel req">Code postal</label><input class="finput" id="p-cp" placeholder="00000" maxlength="5"></div>
+      <div class="fgrp"><label class="flabel req">Ville</label><input class="finput" id="p-ville" placeholder="Ville"></div>
+      <div class="fgrp"><label class="flabel">Téléphone magasin</label><input class="finput" id="p-tel" type="tel" placeholder="04 XX XX XX XX"></div>
+      <div class="fgrp"><label class="flabel">Email magasin</label><input class="finput" id="p-email" type="email" placeholder="contact@magasin.fr"></div>
+      <div class="fgrp"><label class="flabel">Surface de vente</label><input class="finput" id="p-surface" placeholder="150 m²" type="number" min="0"></div>
+    </div>
+    <div class="fg">
+      <div class="fgrp"><label class="flabel">SIRET</label><input class="finput" id="p-siret" placeholder="XXX XXX XXX XXXXX" maxlength="18"></div>
+      <div class="fgrp"><label class="flabel">N° TVA intracommunautaire</label><input class="finput" id="p-tva" placeholder="FR XX XXXXXXXXX"></div>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <a href="crm.html" class="btn btn-outline">← Retour CRM</a>
+    <button class="btn btn-v btn-lg" onclick="goStep(2)">Suivant — Contacts →</button>
+  </div>
+</div>
+
+<!-- ÉTAPE 2 — Contacts -->
+<div class="page-section" id="s2">
+  <div class="card">
+    <div class="card-title">👤 Contact principal</div>
+    <div class="card-sub">Interlocuteur privilégié pour les commandes.</div>
+    <div class="fg">
+      <div class="fgrp"><label class="flabel req">Nom / Prénom</label><input class="finput" id="p-c1" placeholder="Prénom NOM"></div>
+      <div class="fgrp"><label class="flabel">Fonction</label><input class="finput" id="p-fonc" placeholder="Gérant, Acheteur..."></div>
+      <div class="fgrp"><label class="flabel">Téléphone fixe</label><input class="finput" id="p-tel1" type="tel" placeholder="04 XX XX XX XX"></div>
+      <div class="fgrp"><label class="flabel">Portable</label><input class="finput" id="p-port1" type="tel" placeholder="06 XX XX XX XX"></div>
+      <div class="fgrp fg-full"><label class="flabel req">Email</label><input class="finput" id="p-email1" type="email" placeholder="contact@magasin.fr"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">👤 Contact 2 <span style="font-size:.75rem;color:var(--s500);font-weight:400">(optionnel)</span></div>
+    <div class="fg">
+      <div class="fgrp"><label class="flabel">Nom / Prénom</label><input class="finput" id="p-c2" placeholder="Prénom NOM"></div>
+      <div class="fgrp"><label class="flabel">Téléphone</label><input class="finput" id="p-tel2" type="tel" placeholder="06 XX XX XX XX"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">💼 Contact facturation <span style="font-size:.75rem;color:var(--s500);font-weight:400">(optionnel)</span></div>
+    <div class="fg">
+      <div class="fgrp"><label class="flabel">Nom</label><input class="finput" id="p-cf" placeholder="Prénom NOM"></div>
+      <div class="fgrp"><label class="flabel">Email facturation</label><input class="finput" id="p-ef" type="email" placeholder="facture@magasin.fr"></div>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <button class="btn btn-outline" onclick="goStep(1)">← Retour</button>
+    <button class="btn btn-v btn-lg" onclick="goStep(3)">Suivant — Livraisons →</button>
+  </div>
+</div>
+
+<!-- ÉTAPE 3 — Livraisons -->
+<div class="page-section" id="s3">
+  <div class="card">
+    <div class="card-title">🚚 Conditions de livraison</div>
+    <div class="card-sub">Jours et horaires d'accès pour les livraisons.</div>
+    <div class="fgrp" style="margin-bottom:.85rem">
+      <label class="flabel">Jours de livraison acceptés</label>
+      <div class="jours">
+        <div class="jour-btn" onclick="toggleJour(this,'Lundi')">Lun</div>
+        <div class="jour-btn" onclick="toggleJour(this,'Mardi')">Mar</div>
+        <div class="jour-btn" onclick="toggleJour(this,'Mercredi')">Mer</div>
+        <div class="jour-btn" onclick="toggleJour(this,'Jeudi')">Jeu</div>
+        <div class="jour-btn" onclick="toggleJour(this,'Vendredi')">Ven</div>
+        <div class="jour-btn" onclick="toggleJour(this,'Samedi')">Sam</div>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="fgrp"><label class="flabel">Heure d'ouverture</label><input class="finput" id="p-hd" type="time" value="09:00"></div>
+      <div class="fgrp"><label class="flabel">Heure de fermeture</label><input class="finput" id="p-hf" type="time" value="18:00"></div>
+    </div>
+    <div class="fgrp" style="margin-top:.5rem">
+      <label class="flabel">Infos livraison</label>
+      <textarea class="finput" id="p-info-liv" placeholder="Accès réfrigéré, interphone, quai de déchargement..."></textarea>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <button class="btn btn-outline" onclick="goStep(2)">← Retour</button>
+    <button class="btn btn-v btn-lg" onclick="goStep(4)">Suivant — Commercial →</button>
+  </div>
+</div>
+
+<!-- ÉTAPE 4 — Commercial -->
+<div class="page-section" id="s4">
+  <div class="card">
+    <div class="card-title">📊 Informations commerciales</div>
+    <div class="fg">
+      <div class="fgrp">
+        <label class="flabel">Profil revendeur souhaité</label>
+        <select class="finput" id="p-profil"></select>
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Potentiel estimé (EUR HT/mois)</label>
+        <input class="finput" id="p-potentiel" type="number" min="0" placeholder="500">
+      </div>
+      <div class="fgrp fg-full">
+        <label class="flabel">Commentaire / Notes</label>
+        <textarea class="finput" id="p-comment" placeholder="Observations, contexte de la prise de contact..."></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <button class="btn btn-outline" onclick="goStep(3)">← Retour</button>
+    <button class="btn btn-v btn-lg" onclick="goStep(5)">Suivant — Récapitulatif →</button>
+  </div>
+</div>
+
+<!-- ÉTAPE 5 — Envoi -->
+<div class="page-section" id="s5">
+  <div class="card" id="recap-card">
+    <div class="card-title">📋 Récapitulatif</div>
+    <div class="card-sub">Vérifiez les informations avant d'enregistrer.</div>
+    <div class="recap-grid" id="recap-content"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📧 Enregistrement</div>
+    <div class="card-sub">La fiche prospect sera enregistrée dans Supabase et un email de notification sera envoyé.</div>
+    <div class="fg">
+      <div class="fgrp">
+        <label class="flabel">Email notification (optionnel)</label>
+        <input class="finput" id="p-notif" type="email" placeholder="commercial@societe.fr" id="notif-email">
+      </div>
+    </div>
+  </div>
+  <div class="nav-bar">
+    <button class="btn btn-outline" onclick="goStep(4)">← Retour</button>
+    <button class="btn btn-v btn-lg" onclick="enregistrerProspect()">✅ Enregistrer le prospect</button>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success" id="success">
+  <div class="success-ico">✅</div>
+  <h2>Prospect enregistré !</h2>
+  <p id="success-msg">La fiche a été sauvegardée dans le CRM.</p>
+  <div class="success-btns">
+    <a href="prospect.html" class="btn btn-outline">+ Nouveau prospect</a>
+    <a href="crm.html" class="btn btn-v">Voir dans le CRM →</a>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+/* ═══════════════════════════
+   CONFIG
+═══════════════════════════ */
+var CFG     = (typeof KIT_CONFIG !== 'undefined') ? KIT_CONFIG : {};
+var SB_URL  = (CFG.supabase || {}).url || '';
+var SB_KEY  = (CFG.supabase || {}).key || '';
+var SOCIETE = CFG.societe  || {};
+var THEME   = CFG.theme    || {};
+var PROFILS = CFG.profils  || [{ nom: 'Tarif Standard', remise: 0 }];
+
+var joursSelected = [];
+var stepCourant   = 1;
+
+/* Appliquer thème */
+function appliquerTheme() {
+  var c  = THEME.couleur_principale || '#22c55e';
+  var cf = THEME.couleur_foncee     || '#15803d';
+  var cl = THEME.couleur_claire     || '#4ade80';
+  var bg = THEME.couleur_fond       || '#f7fdf9';
+  document.documentElement.style.setProperty('--v',  c);
+  document.documentElement.style.setProperty('--vf', cf);
+  document.documentElement.style.setProperty('--vc', cl);
+  document.documentElement.style.setProperty('--vp', bg === '#f7fdf9' ? '#f0fdf4' : bg);
+  document.title = 'Nouveau Prospect — ' + (SOCIETE.nom || 'CRM');
+  document.getElementById('brand-name').textContent = SOCIETE.nom || 'CRM';
+  var ico = document.getElementById('brand-ico');
+  if (THEME.logo_url) {
+    ico.innerHTML = '<img src="' + THEME.logo_url + '" style="width:100%;height:100%;object-fit:contain;border-radius:8px;">';
+  } else {
+    ico.textContent = THEME.logo_emoji || '🏪';
+    ico.style.background = 'linear-gradient(135deg,' + c + ',' + cl + ')';
+  }
+  /* Profils */
+  var sel = document.getElementById('p-profil');
+  PROFILS.forEach(function(p) {
+    var o = document.createElement('option');
+    o.textContent = p.nom + (p.remise > 0 ? ' (-' + p.remise + '%)' : '');
+    sel.appendChild(o);
+  });
+}
+
+/* ═══════════════════════════
+   NAVIGATION
+═══════════════════════════ */
+function goStep(n) {
+  if (n > 1 && !validerStep(stepCourant)) return;
+  document.querySelectorAll('.page-section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.step').forEach(function(s, i) {
+    s.classList.remove('active');
+    if (i + 1 < n) s.classList.add('done');
+    else s.classList.remove('done');
+  });
+  document.getElementById('s' + n).classList.add('active');
+  document.getElementById('nav-' + n).classList.add('active');
+  stepCourant = n;
+  if (n === 5) genererRecap();
+}
+
+function validerStep(n) {
+  if (n === 1) {
+    var rs = document.getElementById('p-rs').value.trim();
+    var cp = document.getElementById('p-cp').value.trim();
+    var vi = document.getElementById('p-ville').value.trim();
+    if (!rs) { alert('La raison sociale est obligatoire.'); return false; }
+    if (!cp || !vi) { alert('Le code postal et la ville sont obligatoires.'); return false; }
+  }
+  if (n === 2) {
+    var c1 = document.getElementById('p-c1').value.trim();
+    var e1 = document.getElementById('p-email1').value.trim();
+    if (!c1) { alert('Le nom du contact principal est obligatoire.'); return false; }
+    if (!e1) { alert('L\'email du contact principal est obligatoire.'); return false; }
+  }
+  return true;
+}
+
+/* Jours livraison */
+function toggleJour(el, jour) {
+  el.classList.toggle('active');
+  var idx = joursSelected.indexOf(jour);
+  if (idx === -1) joursSelected.push(jour);
+  else joursSelected.splice(idx, 1);
+}
+
+/* Récapitulatif */
+function genererRecap() {
+  var profSel = document.getElementById('p-profil');
+  var profil  = profSel.options[profSel.selectedIndex] ? profSel.options[profSel.selectedIndex].text.split(' (')[0] : '';
+
+  function row(k, v) { return v ? '<div class="recap-row"><span class="recap-label">' + k + '</span><span class="recap-value">' + v + '</span></div>' : ''; }
+
+  document.getElementById('recap-content').innerHTML =
+    '<div class="recap-block"><h3>Magasin</h3>'
+    + row('Raison sociale', v('p-rs')) + row('Adresse', v('p-rue'))
+    + row('CP / Ville', v('p-cp') + ' ' + v('p-ville'))
+    + row('Téléphone', v('p-tel')) + row('Email', v('p-email'))
+    + row('Surface', v('p-surface') ? v('p-surface') + ' m²' : null)
+    + '</div>'
+    + '<div class="recap-block"><h3>Contact</h3>'
+    + row('Contact', v('p-c1')) + row('Fonction', v('p-fonc'))
+    + row('Tél / Portable', [v('p-tel1'), v('p-port1')].filter(Boolean).join(' / ') || null)
+    + row('Email', v('p-email1'))
+    + '</div>'
+    + '<div class="recap-block"><h3>Livraisons</h3>'
+    + row('Jours', joursSelected.length ? joursSelected.join(', ') : '—')
+    + row('Horaires', v('p-hd') && v('p-hf') ? v('p-hd') + ' → ' + v('p-hf') : null)
+    + row('Infos', v('p-info-liv'))
+    + '</div>'
+    + '<div class="recap-block"><h3>Commercial</h3>'
+    + row('Profil souhaité', profil) + row('Potentiel', v('p-potentiel') ? v('p-potentiel') + ' EUR/mois' : null)
+    + row('Commentaire', v('p-comment'))
+    + '</div>';
+}
+
+/* ═══════════════════════════
+   ENREGISTREMENT SUPABASE
+═══════════════════════════ */
+function enregistrerProspect() {
+  if (!validerStep(2)) { goStep(2); return; }
+
+  var profSel = document.getElementById('p-profil');
+  var profil  = profSel.options[profSel.selectedIndex] ? profSel.options[profSel.selectedIndex].text.split(' (')[0] : PROFILS[0].nom;
+
+  var row = {
+    id:              'pro_' + Date.now(),
+    raison_sociale:  v('p-rs'),
+    rue:             v('p-rue'),
+    complement:      '',
+    cp:              v('p-cp'),
+    ville:           v('p-ville'),
+    tel_magasin:     v('p-tel'),
+    email_magasin:   v('p-email'),
+    surface:         v('p-surface'),
+    siret:           v('p-siret'),
+    tva_intra:       v('p-tva'),
+    capital:         '',
+    naf:             '',
+    contact1:        v('p-c1'),
+    tel1:            v('p-tel1'),
+    portable1:       v('p-port1'),
+    email1:          v('p-email1'),
+    contact2:        v('p-c2'),
+    tel2:            v('p-tel2'),
+    fonction:        v('p-fonc'),
+    contact_factu:   v('p-cf'),
+    email_factu:     v('p-ef'),
+    jours_livraison: joursSelected,
+    heure_debut:     v('p-hd'),
+    heure_fin:       v('p-hf'),
+    info_livraison:  v('p-info-liv'),
+    potentiel:       v('p-potentiel'),
+    profil:          profil,
+    commentaire:     v('p-comment')
+  };
+
+  if (!SB_URL || !SB_KEY) {
+    /* Fallback localStorage si Supabase non configuré */
+    try { var pending = JSON.parse(localStorage.getItem('crm_pending_prospects') || '[]'); pending.push(row); localStorage.setItem('crm_pending_prospects', JSON.stringify(pending)); } catch(e) {}
+    afficherSucces(v('p-rs'));
+    return;
+  }
+
+  fetch(SB_URL + '/rest/v1/prospects', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'apikey':        SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Prefer':        'resolution=merge-duplicates'
+    },
+    body: JSON.stringify(row)
+  })
+  .then(function(r) {
+    if (r.ok) {
+      afficherSucces(v('p-rs'));
+    } else {
+      r.json().then(function(d) { alert('Erreur Supabase : ' + (d.message || r.status)); });
+    }
+  })
+  .catch(function() {
+    alert('Erreur réseau. Vérifiez votre connexion.');
+  });
+}
+
+function afficherSucces(nom) {
+  document.querySelectorAll('.page-section').forEach(function(s) { s.style.display = 'none'; });
+  document.querySelector('.stepper').style.display = 'none';
+  document.getElementById('success').style.display = 'block';
+  document.getElementById('success-msg').textContent = '"' + nom + '" a été enregistré dans le CRM et est visible dans l\'onglet Prospects.';
+}
+
+/* ═══════════════════════════
+   UTILS
+═══════════════════════════ */
+function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+/* DÉMARRAGE */
+appliquerTheme();
+</script>
+</body>
+</html>
